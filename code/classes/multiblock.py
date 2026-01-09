@@ -10,6 +10,13 @@ from .slice import *
 
 import numpy as np
 
+from lib import (
+    wspace,
+    indent,
+    VSEP,
+    hl
+)
+
 
 class MultiBlock:
     """ Class to contain all attributes and generate the desired blockMeshDict """
@@ -102,7 +109,22 @@ class MultiBlock:
         self.zVertices.append(self.boundingBox["z-min"])
         if bool(zSplitCoordinate):
             self.zVertices.extend(zSplitCoordinate)
-        self.zVertices.append(self.boundingBox["z-max"])
+        self.zVertices.append(self.boundingBox["z-max"]) 
+    
+    
+    def get_split_info(self) -> str:
+        """ Display the x/y/z coordinates of the (bounding ox & split/cut locations) """
+        
+        splitLocationInfo = VSEP + "\n"
+        splitLocationInfo += "[*] Split plane(s) along X:"
+        splitLocationInfo += indent + ", ".join([str(i) for i in self.xVertices]) + "\n"
+        splitLocationInfo += "[*] Split plane(s) along Y:"
+        splitLocationInfo += indent + ", ".join([str(i) for i in self.yVertices]) + "\n"
+        splitLocationInfo += "[*] Split plane(s) along Z:"
+        splitLocationInfo += indent + ", ".join([str(i) for i in self.zVertices]) + "\n"
+                
+        return splitLocationInfo
+        
         
     def block_count(self) -> Dict:
         """ Get the block count in x, y, z directions """
@@ -113,7 +135,21 @@ class MultiBlock:
                 "z" : len(self.zVertices) - 1,
             }
         self.nBlock["total"] = self.nBlock["x"] * self.nBlock["y"] * self.nBlock["z"]
+        self.display_block_count()
+        
         return self.nBlock
+    
+    
+    def display_block_count(self) -> None:
+        """ Display number of blocks """
+        
+        str2print = VSEP + "\n"
+        str2print += f"Blocks along X : {self.nBlock['x']}\n"
+        str2print += f"Blocks along Y : {self.nBlock['y']}\n"
+        str2print += f"Blocks along Z : {self.nBlock['z']}\n\n"
+        str2print += f"Total blocks   : {self.nBlock['total']}"
+        print(str2print)
+    
     
     def _define_block_point_order(
             self,
@@ -372,15 +408,15 @@ class MultiBlock:
         
         # ### Checking/slicing the ndarray representation of the blocks 
         # print("x-slices")
-        # for i in range(mb.nBlock["z"]):
+        # for i in range(self.nBlock["z"]):
         #     print(blockArray[i, :, :])
         
         # print("y-slices")
-        # for i in range(mb.nBlock["x"]):
+        # for i in range(self.nBlock["x"]):
         #     print(blockArray[:, :, i])
         
         # print("z-slices")
-        # for i in range(mb.nBlock["y"]):
+        # for i in range(self.nBlock["y"]):
         #     print(blockArray[:, i, :].swapaxes(0, 1))
         
         self.slices = {
@@ -409,8 +445,88 @@ class MultiBlock:
                                             k,
                                             tuple(self.zxStackedBlocks[k])
                                         )
+    
+    def make(self) -> None:
+        """ Run the multi-block operations """
+        
+        self.split_locations()
+        self.block_count()
+        self.create_vertex_group()
+        self.create_blocks()
+        self.get_slices()
+    
+    def face_info(self) -> str:
+        """ Generate face information of the multi-block """
+        
+        faceInfoStr = "FACE INFO\n" 
+        faceInfoStr += VSEP + "\n\n"
+        
+        for k,v in self.blocks.items():
+            faceInfoStr += "Block-" + str(k) + " : " + str(v.index) + "\n\n"
+            for faceName, faces in v.faces.items():
+                faceInfoStr += indent + f"{faceName:6} : (" + " ".join(str(x) for x in faces.vertices) + ")\n"
+            faceInfoStr += "\n\n"
+        
+        return faceInfoStr
+    
+    def slice_info(self) -> str:
+        """ Generate slice information of the multi-block """
+        
+        hl()
+        print(f"Number of blocks in each XY plane : {self.nBlockXyPlane}")
+        print(f"Number of blocks in each YZ plane : {self.nBlockYzPlane}")
+        print(f"Number of blocks in each ZX plane : {self.nBlockZxPlane}")
         
         
+        print("\n")
+        hl()
+        sliceInfoStr = "### SLICE INFO ###\n"
+        sliceInfoStr += VSEP + "\n"
+        
+        ### blw -> blockLabelWidth
+        blw = len(str(self.nBlock["total"] - 1))
+        sliceInfoStr += "SLICE PLANE - XY\n"
+        sliceInfoStr += VSEP + "\n"
+        
+        for i, _slice in self.slices["xy"].items():
+            sliceInfoStr += f"Slice Index - {_slice.index:4} | Blocks : {", ".join(f'{x:{blw}}' for x in _slice.blocks)}\n"
+        
+        sliceInfoStr += VSEP + "\n"
+        sliceInfoStr += "SLICE PLANE - YZ\n"
+        sliceInfoStr += VSEP + "\n"
+        
+        for j, _slice in self.slices["yz"].items():
+            sliceInfoStr += f"Slice Index - {_slice.index:4} | Blocks : {", ".join(f'{x:{blw}}' for x in _slice.blocks)}\n"
+        
+        sliceInfoStr += VSEP + "\n"
+        sliceInfoStr += "SLICE PLANE - ZX\n"
+        sliceInfoStr += VSEP + "\n"
+        
+        for k, _slice in self.slices["zx"].items():
+            sliceInfoStr += f"Slice Index - {_slice.index:4} | Blocks : {", ".join(f'{x:{blw}}' for x in _slice.blocks)}\n"
+        
+        print(sliceInfoStr)
+        
+        return sliceInfoStr
+    
+    def edge_info(self) -> str:
+        """ Generate edge information of the multi-block """
+        
+        edgeInfoStr = "### EDGE INFO ###\n"
+        edgeInfoStr += VSEP + "\n"
+        
+        for blockId, iblock in self.blocks.items():
+            edgeInfoStr += f"\n\n{VSEP}\nBlock ID - {blockId}\n"
+            edgeInfoStr += VSEP + "\n"
+            edgeInfoStr += "Index | ->  - Position     - Definition\n"
+            edgeInfoStr += VSEP + "\n"
+            
+            for iedge in iblock.edges:
+                edgeInfoStr += f"{iedge.id:5} | {iedge}\n"
+        
+        return edgeInfoStr
+        
+            
 
 
 
