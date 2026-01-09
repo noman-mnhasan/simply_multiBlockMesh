@@ -1,0 +1,197 @@
+
+import os
+import shutil
+
+import classes as mbc
+
+from typing import (
+    List, 
+    Dict,
+)
+
+from lib import (
+    VSEP,
+    hl
+)
+
+
+
+
+blockMeshDictHeader = """/*--------------------------------*- C++ -*----------------------------------*\\
+| =========                 |                                                 |
+| \\\\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\\\    /   O peration     | Version:  v2412                                 |
+|   \\\\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\\\/     M anipulation  |                                                 |
+\\*---------------------------------------------------------------------------*/
+
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      blockMeshDict;
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+\n"""
+
+
+class Setup:
+    """ Setup case directory to run blockMesh """
+    
+    def __init__(
+            self,
+            scriptDir: str,
+            caseDir: str,
+            
+        ) -> None:
+        """_summary_
+
+        Args:
+            templateDir (str): Directory where the template case files are stored
+            caseDir (str): OpenFoam case directory
+        """
+        
+        self._scriptDir = scriptDir
+        self._caseDir = caseDir
+        
+        self._caseSubDirs = [
+                self._caseDir + os.sep + "constant",
+                self._caseDir + os.sep + "system",
+            ]
+        
+        self._templateDirname = "case_system_template"
+        self._templateDir = self._scriptDir + os.sep + self._templateDirname
+    
+    def remove_case_dir(self) -> bool:
+        """ Check path if the path exists  """
+        
+        casePath = self._caseDir + os.sep + "case"
+        if os.path.exists(casePath):
+            for item in os.listdir(casePath):
+                itemPath = casePath + os.sep + item
+                if os.path.isfile(itemPath) or os.path.islink(itemPath):
+                    os.remove(itemPath)
+                
+                elif os.path.isdir(itemPath):
+                    shutil.rmtree(itemPath)
+        
+        hl()
+        print("OpenFoam case directory for blockMesh cleared!")
+    
+    def make_case_dir(self) -> None:
+        """  """
+        
+        for item in self._caseSubDirs:
+            directory = item.split(os.sep)[-1]
+            try:
+                os.makedirs(item, exist_ok = True)
+                
+            except OSError as error:
+                hl()
+                print(f"Error creating the \"{directory}\" directory.")
+                print("Aborting ... ...")
+                exit()
+        
+    def create_foam_file(self) -> None:
+        """ Creating a *.foam file for ease of use with ParaView """
+        
+        os.system("touch " + self._caseDir + os.sep + "case.foam")
+        
+    def copy_template_files(self) -> None:
+        """ Copying template case files - to run "blockMesh"  """
+        
+        copyFileList = [
+                self._templateDir + os.sep + "controlDict",
+                self._templateDir + os.sep + "fvSchemes",
+                self._templateDir + os.sep + "fvSolution",
+            ]
+        
+        for sourceFile in copyFileList:
+            targetFile = self._caseDir + os.sep + "system"
+            shutil.copy(sourceFile, targetFile)
+    
+    def run(self) -> None:
+        """ Run the case setup sequence """
+        
+        self.remove_case_dir()
+        self.make_case_dir()
+        self.create_foam_file()
+        self.copy_template_files()
+    
+    def blockmeshdict(
+            self,
+            convertToMeters: float,
+            mb: mbc.MultiBlock
+        ) -> None:
+        """ Generate the content of blockMeshDict and write in file """
+        
+        wspace = " "
+        indent = wspace * 4    
+        dictContent = blockMeshDictHeader
+        
+        dictContent +="\nconvertToMeters=" + str(convertToMeters) + ";\n"
+        
+        dictContent += "vertices\n"
+        dictContent += "(\n"
+        
+        count = 0
+        yCount = 0
+        zCount = 0
+        xCountLen = len(mb.xVertices)
+        yCountLen = len(mb.yVertices)
+        
+        dictContent += (indent * 1) + "// ==== y-" + str(yCount) + ", z-" + str(zCount) + " ==== //\n\n"
+        for k, v in mb.vertices.items():        
+            if count >= xCountLen and count%xCountLen == 0:
+                yCount += 1
+                if yCount%yCountLen == 0:
+                    yCount = 1
+                    zCount += 1            
+                dictContent += "\n" + (indent * 1) + "// ==== y-" + str(yCount) + ", z-" + str(zCount) + " ==== //\n\n"        
+            dictContent += (indent * 1) + "(" + " ".join([str(x) for x in v]) + ")    // vertex-" + str(k) + "\n"
+            count += 1
+        
+        dictContent += ");\n"
+        dictContent += "\n"
+        dictContent += "blocks\n"
+        dictContent += "(\n"
+        
+        for k, v in mb.blocks.items():
+            nx, ny, nz = mb.blocks[k].get_spacing()
+            
+            nxs = f"{nx}"
+            nys = f"{ny}"
+            nzs = f"{nz}"
+            
+            dictContent += (indent * 1) + "// ==== Block-" + str(k) + ", Index : "  +  str(v.index) + " ==== //\n"
+            dictContent += (indent * 1) + "hex (" + " ".join([f"{x:3}" for x in mb.blocks[k].vertices]) + ") (" + nxs + " " + nys + " " + nzs + ") simpleGrading (1 1 1)" + "\n\n"
+        
+        dictContent += ");\n"
+        dictContent += "\n"
+        dictContent += "edges\n"
+        dictContent += "(\n"
+        dictContent += ");\n"
+        dictContent += "\n"
+        dictContent += "boundary\n"
+        dictContent += "(\n"
+        dictContent += ");\n"
+        dictContent += "\n"
+        dictContent += "mergePatchPair\n"
+        dictContent += "(\n"
+        dictContent += ");\n"
+        dictContent += "// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n"
+        dictContent += "// Comments/Notes\n"
+        dictContent += "//\n"
+        dictContent += "//\n"
+        dictContent += "// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n"
+        dictContent += "\n"    
+        
+        
+        ### Write blockMeshDict
+        exportFile = self._caseDir + os.sep + "system" + os.sep + "blockMeshDict"
+        with open(exportFile, "w") as bmd:
+            bmd.write(dictContent)
+        

@@ -4,6 +4,13 @@ from typing import (
     Dict,
 )
 
+from lib import (
+    wspace,
+    indent,
+    VSEP,
+    hl
+)
+
 from .edge import *
 
 
@@ -163,8 +170,6 @@ class Block:
     def _get_hex(self) -> str:
         """ Define the block hex. """
         
-        wspace = " "
-        
         hexDef = "hex ("
         
         hexDef += f"{self.vertices['back']['bottom']['left']}" + wspace
@@ -184,8 +189,6 @@ class Block:
     def _get_spacing(self) -> str:
         """ Define the block grid spacing """
         
-        wspace = " "
-        
         spacingDef = "("
         spacingDef += f"{self.spacing['x']}" + wspace
         spacingDef += f"{self.spacing['y']}" + wspace
@@ -196,8 +199,6 @@ class Block:
     
     def _get_grading(self):
         """ Define the block edge grading. """
-        
-        wspace = " "
         
         gradingDef = "("
         gradingDef += f"{self.grading['x']}" + wspace
