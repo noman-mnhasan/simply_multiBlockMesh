@@ -3,7 +3,6 @@ title: Simply multiBlockMesh (SimBloM)
 message: >-
   If you use this software, please cite it using the
   metadata from this file.
-type: software
 authors:
   - given-names: Noman
     family-names: Hasan
