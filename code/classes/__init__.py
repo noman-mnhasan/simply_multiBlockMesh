@@ -10,6 +10,7 @@ from .face import *
 from .multiblock import *
 from .setup import *
 from .slice import *
+from .vertex import *
 
 
 __all__ = [
@@ -20,7 +21,8 @@ __all__ = [
     "face",
     "multiblock",
     "setup",
-    "slice"
+    "slice",
+    "vertex"
 ]
 
 

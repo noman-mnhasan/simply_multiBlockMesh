@@ -7,6 +7,7 @@ import sys
 import json
 import shutil
 
+from datetime import datetime
 from collections import OrderedDict
 import classes as mbc
 import numpy as np
@@ -17,9 +18,9 @@ scriptDir = os.path.dirname(scriptPath)
 sys.path.append(scriptDir)
 
 from lib import (
-    wspace,
-    indent,
     VSEP,
+    templateDirName,
+    templateFilenameBlockEdit,
     hl
 )
 
@@ -27,8 +28,6 @@ from lib import (
 #---------------------------------------
 ### Version Notification
 print(f"\n\n{VSEP}\nSimply MultiBlockMesh - v{__version__}")
-
-
 #---------------------------------------
 # MAKE MULTI-BLOCK MESH (blockMesh)
 #---------------------------------------
@@ -38,8 +37,10 @@ def make_multi_block_blockmeshdict(
         convertToMeters,
         splitPlanes,
         gridSpacing,
-        hex2exclude, 
+        hex2exclude,
+        workingDir,
         caseDir,
+        need2modify
     ):
     """
         Calculated the dimensions of the blocks of the final "multi-block".
@@ -65,8 +66,13 @@ def make_multi_block_blockmeshdict(
         splitPlanes (dict): List of locations where the bounding box will be split to create the multi-block
         gridSpacing (dict): Spacing of the grid along x, y, z directions
         hex2exclude (dict): Hex definitions to exclude during in the "blocks" section to create the desired mesh domain.
-        caseDir (str): Location/path of the working directory
+        workingDir (str): Location/path of the working directory
+        caseDir (str): Location/path of the Openfoam case directory
+        need2modify (bool): True, it edits needs to be applied in the multi-block
     """
+    
+    hl()
+    print("Working Directory : " + workingDir)
     
     ### Create a MultiBlockMesh object
     mb = mbc.MultiBlock(
@@ -75,20 +81,28 @@ def make_multi_block_blockmeshdict(
             gridSpacing,
             hex2exclude
         )
-    ### Calculate/prepare dictionary data
-    mb.make()
     
+    ### Create an Edit object
+    edit = mbc.Edit(workingDir)
     
     ### Create a Setup object
     setup = mbc.Setup(
             scriptDir,
             caseDir
         )
+    
+    ### Calculate/prepare dictionary data
+    mb.make()
+    
+    ### Run blockMesh setup
     setup.run()
     
     
     ### Get split location information
-    splitLocationInfo = mb.get_split_info()
+    splitLocationInfo = VSEP + "\n"
+    splitLocationInfo += "Split location information\n"
+    splitLocationInfo += mb.get_split_info()
+    print(splitLocationInfo)
     
     ### Write the x/y/z coordinates of the (bounding ox & split/cut locations)
     locationFile = os.path.dirname(caseDir) + os.sep + "xyz_locations.txt"
@@ -97,12 +111,30 @@ def make_multi_block_blockmeshdict(
         lf.write(splitLocationInfo)
     
     
+    ### Update multi-block based on "edit task(s)"
+    ### Read edit entries
+    edit.does_file_exists()
+    if edit.fileExist:
+        if need2modify:
+            edit.read()
+            ### Performing edits
+            edit.execute(
+                    mb.vertices,
+                    mb.blocks
+                )
+        else:
+            hl()
+            print(f"Execute multi-block edit? - {need2modify}")
+            print("No multi-block edits will be applied.")
+    
+    
     ### Create blockMesh dictionary
     setup.blockmeshdict(
             convertToMeters,
             mb,
+            edit.edgeDefinition,
+            edit.boundaryDefinition
         )
-    
     
     ### Get face information
     faceInfoStr = mb.face_info()
@@ -130,6 +162,33 @@ def make_multi_block_blockmeshdict(
     with open(edgeInfoFile, "w") as eif:
         eif.write(edgeInfoStr)
     
+    ### Create edit-input file if doesn't exist
+    if not edit.fileExist:
+        currentTime = datetime.now()
+        currentTimeStr = currentTime.strftime("%Y-%m-%d_%H-%M-%S")
+        
+        sourcefile = os.path.dirname(scriptDir) + os.sep + templateDirName + os.sep + templateFilenameBlockEdit
+        
+        targetFilename = templateFilenameBlockEdit[:-3] + "_" + currentTimeStr + ".py"
+        targetFile = workingDir + os.sep + targetFilename
+        
+        shutil.copy2(
+                sourcefile,
+                workingDir
+            )
+        
+        shutil.move(
+                workingDir + os.sep + templateFilenameBlockEdit,
+                targetFile
+            )
+        hl()
+        print("File created for defining edit and boundary/patch.")
+        print(f"File : {targetFilename}")
+    
+    if edit.fileExist:
+        hl()
+        print(f"Input file for block edit exists.\nFile: {edit.filename}")
+    
     
     ### End of process
     hl()
@@ -144,7 +203,15 @@ if __name__ == "__main__":
     splitPlanes = json.loads(os.environ["split_plane_list"])
     gridSpacing = json.loads(os.environ["gid_spacing"])
     hex2exclude = json.loads(os.environ["hex2exclude"])["exclude-list"]
-    caseDir = os.environ["export_directory"] + os.sep + "case"
+    workingDir = os.environ["export_directory"]
+    caseDir = workingDir + os.sep + "case"
+    if "read_edit_file" in os.environ:
+        if os.environ["read_edit_file"].lower() =="yes":
+            need2modify = True
+        else:
+            need2modify = False
+    else:
+        raise ValueError("Missing user input - 'read_edit_file?'")
     
     make_multi_block_blockmeshdict(
             boundingBox,
@@ -152,7 +219,9 @@ if __name__ == "__main__":
             splitPlanes,
             gridSpacing,
             hex2exclude,
+            workingDir,
             caseDir,
+            need2modify
         )
 
 

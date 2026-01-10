@@ -34,6 +34,11 @@ class Boundary:
     
     @name.setter
     def name(self, value: str):
+        """ Check, raise error and assign value of Boundary.name """
+        
+        if not isinstance(value, str):
+            raise ValueError("Value of 'Boundary.name' must be an string.")
+        
         self._name = value
         
     ### Boundary - bcType
@@ -43,6 +48,11 @@ class Boundary:
     
     @bcType.setter
     def bcType(self, value: str):
+        """ Check, raise error and assign value of Boundary.bcType """
+        
+        if not isinstance(value, str):
+            raise ValueError("Value of 'Boundary.bcType' must be an string.")
+        
         self._nbcType = value
         
     ### Boundary - faces
@@ -52,6 +62,12 @@ class Boundary:
     
     @faces.setter
     def faces(self, value: tuple[tuple]):
+        """ Check, raise error and assign value of Boundary.faces """
+        
+        if not isinstance(value, tuple) and not all([isinstance(x, tuple) for x in values]):
+            raise ValueError("Value of 'boundary.faces' must be a tuple of tuples.")
+            if not all([[isinstance(f, Face) for f in x] for x in value]):
+                raise ValueError("Elements of 'Boundary.faces' must be instances of 'Face' class.")
         self._faces = value
     
     def definition(self) -> str:
