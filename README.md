@@ -10,6 +10,7 @@
 ### Table of Contents
 
 1. [About](#about)
+2. [Why "Simply MultiBlockMesh"](#why-simply-multiblockmesh)
 2. [How To Use](#how-to-use)
 3. [Example Workflow](#example-workflow)
 
@@ -28,12 +29,54 @@
 
 ### About
 
-**Simply MultiBlockMesh** is a simple script to generate multi-block blockMeshDict for OpenFOAM. The purpose of this script is to generate a draft `multi-block` **blockMeshDict**, based on the user input.
+**Simply MultiBlockMesh** is a python tool for easy, fast, and robust way of generating multi-block **blockMeshDict** for OpenFOAM. The purpose of this script is to create complex `multi-block` **blockMeshDict**, based on the user input.
 
-The resultant mesh is a `brick-like` mesh/domain. The generated block/hex definitions then can be removed/commented out to create more complex geometry. The result is still `blocky`. By adding edge definitions, more realistic mesh/domain can be created.
+**Simply MultiBlockMesh** works in an iterative way. First, it creates a simple `brick-like` mesh/domain from the user's input. Then by defining  more specific "edit entries" as user input, **Simply MultiBlockMesh** generates fine structured mesh representing complex geometries (or, domains).
 
-For more sophisticated mesh/domain using blockMesh, try tools like [Classy Blocks](https://github.com/damogranlabs/classy_blocks). [^1]
+There are other sophisticated tools/libraries available for making beautiful, yet complex structured mesh, for example - [Classy Blocks](https://github.com/damogranlabs/classy_blocks). [^1]
 
+
+<br>
+
+### Why "Simply MultiBlockMesh"
+
+**Simply MultiBlockMesh** (SimBloM) aims to make the multi-block mesh with **blockMesh** faster, and more intuitive. Think of it this way, **blockMesh works in a bottom up approach** and the process begins with - 
+
+- Defining **vertices**
+- Defining **edges** - all straight line, implicitly defined when defining block
+- Defining **faces** - again, implicitly defined when defining block
+- Defining **block**/**hex**
+
+<br>
+
+> **Simply MultiBlockMesh** (SimBloM) provides a top down intuition to its user to think about the mesh from a high level (a birds eye view) and **Simply multiBlockMesh** will handle the low level implementation.
+
+<br>
+
+With **Simply multiBlockMesh**, the user needs to think about the mesh from a "block" point of view.
+
+- It makes easier to remove/edit blocks
+- It provides fast and easy to collapse faces/edges
+
+    - Identify the block id
+    - Provide the location/position of the  edge(s) and vertices(s)
+    - Simply blockMesh will do it without the user having to manually make multiple changes in the **blockMeshDict** file.
+
+- it's asy to implement edge features (arc, spline, polyline)
+- Defining boundary/patch is intuitive
+
+    - Identify exterior block(s) to implement a patch
+    - Tell **Simply multiBlockMesh** the block id(s) and the face(s) (front/back/left/right/top/down)
+    - Provide the patch name(s) and type(s)
+    - **Simply multiBLockMesh** will handle the low level implementation of converting block/face information into blockMesh path entry.
+
+<br>
+
+**Simply MultiBlockMesh** does not create predefined shapes, directly. It's still the user who makes the mesh, **Simply MultiBlockMesh** helps the user to do is - **faster, more reliably and with more ease**.
+
+<br>
+
+**To summarize** - While **blockMesh** workflow is a `bottom up way`, **Simply multiBlockMesh** is a `top down way` and more intuitive way of working with blockMesh.
 
 <br>
 
@@ -45,11 +88,11 @@ For more sophisticated mesh/domain using blockMesh, try tools like [Classy Block
 4. Run the shell scripts (user input) to get a `blockMeshDict`.
 5. Run `blockMesh` using the created `blockMeshDict`
     1. Get the initial brick-like domain.
-    2. Add blocks/hexes as needed in the "exclusion list" in the user input (`manual action`).
-    3. Add edge definition if curved topology is needed (`manual action`).
+    2. Add blocks/hexes as needed in the "exclusion list" in the user input (after initial run).
+    3. Add edge definition if curved topology is needed (using the `block_edit_*py` file).
 5. Rerun the script with updated user input to get an `updated blockMeshDict`.
-6. Run `blockMesh` again to get updated mesh
-    1. Add the boundary information in the `blockMeshDict` file.
+    1. Run `blockMesh` again to get updated mesh
+7. Add boundaries/patch using the `block_edit_*py` file.
 
 
 <br>
@@ -394,6 +437,64 @@ These files, along with visually identifying blocks (using ParaView), users can 
 
 Using the information saved in the `face_information.txt` file, boundary conditions (patches) can be defined (manually). Re-run`blockMesh`after defining the boundaries.
 
+Example of a boundary/patch input from user
+
+```python
+boundary[1] = {
+    "name" : "dummy_inlet",
+    "type" : "inlet",
+    "faces" : [
+            [0, "left"],    ### [block-id, face-name]
+            ### Add more faces as [block-id, face-name] list entry (if application) 
+        ]
+
+boundary[2] = {
+    "name" : "dummy_outlet",
+    "type" : "outlet",
+    "faces" : [
+            [11, "right"],    ### [block-id, face-name]
+        ]
+}
+    
+}
+```
+
+The corresponding entry in the generated ***blockMeshDict**
+
+```C++
+
+boundary
+(
+    dummy_inlet
+    {
+        type    inlet;
+        faces
+        (
+            /*
+            Face definition autogenerated from this entry
+            --> "faces" : [[11, "right"],
+            */
+            (0 4 16 12)
+        );
+    }
+
+
+    dummy_outlet
+    {
+        type    outlet;
+        faces
+        (
+            /*
+            Face definition autogenerated from this entry
+            --> "faces" : [[0, "left"],
+            */
+            (31 35 23 19)
+        );
+    }
+
+
+);
+```
 
 <br>
 
