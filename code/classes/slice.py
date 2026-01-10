@@ -19,9 +19,9 @@ class Slice:
         Initialize slice instance
         
         Args: 
-            plane: The plane along which the slice is made -> XY, YZ, ZX
-            index: Index of the slice 
-            blocks: A tuple containing the block which are contained in the slice 
+            plane (str): The plane along which the slice is made -> XY, YZ, ZX
+            index (int): Index of the slice 
+            blocks (tuple): A tuple containing the blocks (class: Block) which are contained in the slice 
         """
         
         self._plane = plane
@@ -38,6 +38,11 @@ class Slice:
     
     @plane.setter
     def plane(self, value: str) -> None:
+        """ Check, raise error and assign value of Slice.plane """
+        
+        if not isinstance(value, str):
+            raise ValueError("Value of 'Slice.plane' must be a string.")
+        
         self._plane = value
     
     ### Slice -> index
@@ -47,6 +52,11 @@ class Slice:
     
     @index.setter
     def index(self, value: int) -> None:
+        """ Check, raise error and assign value of Slice.index """
+        
+        if not isinstance(value, int):
+            raise ValueError("Value of 'Slice.index' must be an integer.")
+        
         self._index = value
     
     ### Slice -> blocks
@@ -56,5 +66,13 @@ class Slice:
     
     @blocks.setter
     def blocks(self, value: tuple) -> None:
+        """ Check, raise error and assign value of Slice.blocks """
+        
+        if not isinstance(value, tuple):
+            raise ValueError("Value of 'Slice.blocks' must be a tuple.")
+            
+            if not all([isinstance(x, int) for x in value]):
+                raise ValueError("Elements of 'Slice.blocks' must be integers.")
+        
         self._blocks = value
         

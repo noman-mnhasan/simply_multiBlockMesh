@@ -11,7 +11,9 @@ from lib import (
     hl
 )
 
+from .face import *
 from .edge import *
+from .vertex import *
 
 
 class Block:
@@ -31,10 +33,13 @@ class Block:
         Initialize block instance
         
         Args:
-            index: The associated index of the block instance
-            vertices: Vertices used to define the block (needs 8 vertices to define each block)
-            spacing: Grid spacing along x, y, z directions
-            grading: Cell expansion ratio
+            id (int): ID of the block
+            index (str): The associated index of the block instance
+            vertices (tuple): Vertices (Type: Vertex class) used to define the block (needs 8 vertices to define each block)
+            vertexCoordinates: Coordinates of the vertex defining the block
+            faces (dict): Faces (Type: Face class) used to define the block (needs 6 faces to define each block)
+            spacing (dict): Grid spacing along x, y, z directions
+            grading (dict): Cell expansion ratio
         """
         
         self._id = id
@@ -59,6 +64,11 @@ class Block:
     
     @id.setter
     def id(self, value: int):
+        """ Check, raise error and assign value of Block.id  """
+        
+        if not isinstance(value, int):
+            raise ValueError("Value of 'Block.id' must be an integer.")
+        
         self._id = value
     
     ### Block -> index
@@ -68,6 +78,11 @@ class Block:
     
     @index.setter
     def index(self, value: str):
+        """ Check, raise error and assign value of Block.index """
+        
+        if not isinstance(value, str):
+            raise ValueError("Value of 'Block.index' must be a string.")
+        
         self._index = value
     
     ### Block -> vertices
@@ -77,6 +92,14 @@ class Block:
     
     @vertices.setter
     def vertices(self, value: tuple):
+        """ Check, raise error and assign value of Block.vertices """
+        
+        if not isinstance(value, tuple):
+            raise ValueError("Value of 'Block.vertices' must be a tuple of integers.")
+            
+            if not all([isinstance(x, int) for x in value]):
+                raise ValueError("Elements of 'Block.vertices' must be integers.")
+        
         self._vertices = value
     
     ### Block -> vertex coordinates
@@ -85,7 +108,14 @@ class Block:
         return self._vertexCoordinates
     
     @vertexCoordinates.setter
-    def vertexCoordinates(self, value: Dict):
+    def vertexCoordinates(self, value: dict):
+        """ Check, raise error and assign value of Block.vertexCoordinates """
+        
+        if not isinstance(value, Dict):
+            raise ValueError("Value of 'Block.vertexCoordinates' must be a dictionary.")
+            if not all([isinstance(x, Vertex) for x in value.values()]):
+                raise ValueError("Elements of 'Block.vertexCoordinates' must be floats.")
+        
         self._vertexCoordinates = value
     
     ### Block -> faces
@@ -95,15 +125,29 @@ class Block:
     
     @faces.setter
     def faces(self, value: Dict):
+        """ Check, raise error and assign value of Block.faces """
+        
+        if not isinstance(value, dict):
+            raise ValueError("Value of 'Block.faces' must be a dictionary.")
+            if not all([isinstance(x, Face) for x in value]):
+                raise ValueError("Elements of 'Block.faces' must be instances of 'face' class.")
+        
         self._faces = value
     
     ### Block -> edges
     @property
-    def edges(self) -> Dict:
+    def edges(self) -> tuple:
         return self._edges
     
     @edges.setter
-    def edges(self, value: Dict):
+    def edges(self, value: tuple):
+        """ Check, raise error and assign value of Block.edges """
+        
+        if not isinstance(value, tuple):
+            raise ValueError("Value of 'Block.edges' must be a dictionary.")
+            if not all([isinstance(x, Edge) for x in value]):
+                raise ValueError("Elements of 'Block.edges' must be instances of 'edge' class.")
+        
         self._edges = value
     
     ### Block -> spacing
@@ -113,8 +157,14 @@ class Block:
     
     @spacing.setter
     def spacing(self, value: Dict):
+        """ Check, raise error and assign value of block spacing """
+        
+        if not isinstance(value, dict):
+            raise ValueError("Value of 'Block.spacing' must be a dictionary.")
+            if not all([isinstance(x, int) for x in value]):
+                raise ValueError("Elements of 'Block.spacing' must be integers")
         self._spacing = value
-                
+        
         self._dx = self._spacing["x"]
         self._dy = self._spacing["y"]
         self._dz = self._spacing["z"]
@@ -126,6 +176,13 @@ class Block:
     
     @grading.setter
     def grading(self, value: Dict):
+        """ Check, raise error and assign value of block edge grading """
+        
+        if not isinstance(value, dict):
+            raise ValueError("Value of 'Block.grading' must be a dictionary.")
+            if not all([isinstance(x, (int, float)) for x in value]):
+                raise ValueError("Elements of 'Block.grading' must be integers or floats")
+        
         self._grading = value
     
     def get_edges(self) -> None:
@@ -152,7 +209,7 @@ class Block:
             11 --> right - top    - z
         """
         
-        self._edges = (
+        self.edges = (
                 Edge(0, "x", "back-bottom", self.vertices[0], self.vertices[1]),
                 Edge(1, "x", "back-top", self.vertices[3], self.vertices[2]),
                 Edge(2, "x", "front-bottom", self.vertices[4], self.vertices[5]),
@@ -192,7 +249,7 @@ class Block:
         spacingDef = "("
         spacingDef += f"{self.spacing['x']}" + wspace
         spacingDef += f"{self.spacing['y']}" + wspace
-        spacingDef += f"{self.spacing['xz']}"
+        spacingDef += f"{self.spacing['z']}"
         
         return spacingDef
     
@@ -227,7 +284,9 @@ class Block:
         yCoord = []
         zCoord = []
         
-        for loc, coord in self._vertexCoordinates.items():
+        for loc, blockVertex in self._vertexCoordinates.items():
+            coord = blockVertex
+            
             xCoord.append(coord[0])
             yCoord.append(coord[1])
             zCoord.append(coord[2])

@@ -7,6 +7,7 @@ from typing import (
 from .block import *
 from .face import *
 from .slice import *
+from .vertex import *
 
 import numpy as np
 
@@ -32,10 +33,10 @@ class MultiBlock:
         Initialize MultiBlock instance
         
         Args:
-            boundingBox: Bounding box of the multi-block mesh region
-            splitPlanes: Planes at which the bounding box will be split
-            gridSpacing: Grid spacing for the blocks
-            hex2exclude: Ids of the block/hex to exclude in the dictionary to modify the multi-block mesh region
+            boundingBox (dict): Bounding box of the multi-block mesh region
+            splitPlanes (list): Planes at which the bounding box will be split
+            gridSpacing (dict): Grid spacing for the blocks
+            hex2exclude {list}: Ids of the block/hex to exclude in the dictionary to modify the multi-block mesh region
         """
         self._boundingBox = boundingBox
         self._splitPlanes = splitPlanes
@@ -53,7 +54,6 @@ class MultiBlock:
         self.vertices = OrderedDict()
         self.blocks = OrderedDict()
         self.slices = OrderedDict()
-        # self.edges = []
     
     ### MultiBlock - bounding box
     @property
@@ -62,6 +62,11 @@ class MultiBlock:
     
     @boundingBox.setter
     def boundingBox(self, value: Dict):
+        """ Check, raise error and assign value of MultiBlock.boundingBox """
+        
+        if not isinstance(value, dict):
+            raise ValueError("Value of 'MultiBlock.boundingBox' must be a dictionary.")
+        
         self._boundingBox = value
     
     ### MultiBlock - split planes
@@ -71,6 +76,14 @@ class MultiBlock:
     
     @splitPlanes.setter
     def splitPlanes(self, value: List[float]):
+        """ Check, raise error and assign value of MultiBlock.splitPlanes """
+        
+        if not isinstance(value, list):
+            raise ValueError("Value of 'MultiBlock.splitPlanes' must be a tuple.")
+            
+            if not all([isinstance(x, (float)) for x in value]):
+                raise ValueError("Elements of 'MultiBlock.splitPlanes' must be floats.")
+        
         self._splitPlanes = value
     
     ### MultiBlock - grid spacing
@@ -80,6 +93,14 @@ class MultiBlock:
     
     @gridSpacing.setter
     def gridSpacing(self, value: Dict):
+        """ Check, raise error and assign value of MultiBlock.vertices """
+        
+        if not isinstance(value, dict):
+            raise ValueError("Value of 'MultiBlock.vertices' must be a tuple.")
+            
+            if not all([isinstance(x, int) for x in value]):
+                raise ValueError("Elements of 'MultiBlock.vertices' must be integers.")
+        
         self._gridSpacing = value
                 
         self._dx = self._gridSpacing["x"]
@@ -159,7 +180,20 @@ class MultiBlock:
             yTop: int,
             ix: int
         ) -> tuple:
-        """ Define and arrange vertices needed to define a block. """
+        """
+        Define and arrange vertices needed to define a block.
+
+        Args:
+            zBack (int): z-index associated with the back face
+            zFront (int): z-index associated with the front face
+            yBottom (int): y-index associated with the bottom face
+            yTop (int): y-index associated with the yop face
+            ix (int): Index /vertex id
+
+        Returns:
+            tuple: of 8 instances of the Vertex class defining 
+                the block ordered according to blockMesh convention
+        """
         
         pointBackBottomLeft = self.vertexGroupDict[zBack][yBottom][ix]
         pointBackBottomRight = self.vertexGroupDict[zBack][yBottom][ix + 1]
@@ -187,16 +221,33 @@ class MultiBlock:
     def _define_face(
             self,
             index: int,
-            pointBackBottomLeft: int,
-            pointBackBottomRight: int,
-            pointBackTopRight: int,
-            pointBackTopLeft: int,
-            pointFrontBottomLeft: int,
-            pointFrontBottomRight: int,
-            pointFrontTopRight: int,
-            pointFrontTopLeft: int
+            pointBackBottomLeft: Vertex,
+            pointBackBottomRight: Vertex,
+            pointBackTopRight: Vertex,
+            pointBackTopLeft: Vertex,
+            pointFrontBottomLeft: Vertex,
+            pointFrontBottomRight: Vertex,
+            pointFrontTopRight: Vertex,
+            pointFrontTopLeft: Vertex
         ) -> Dict:
-        """ Define block faces for a given block id. """
+        """
+        Define block faces for a given block id.
+
+        Args:
+            index (int): Id of the block to which these faces belong
+            pointBackBottomLeft (Vertex): point position, back-bottom-left
+            pointBackBottomRight (Vertex): point position,  back-bottom-right
+            pointBackTopRight (Vertex): point position, back-top-right
+            pointBackTopLeft (Vertex): point position, back-yop-left
+            pointFrontBottomLeft (Vertex): point position, front-bottom-left
+            pointFrontBottomRight (Vertex): point position, front-bottom-right
+            pointFrontTopRight (Vertex): point position, front-top-right
+            pointFrontTopLeft (Vertex): point position, front-top-left
+
+        Returns:
+            Dict: of 6 instances of the Face class which defines the 
+                given block
+        """
         
         faces = {}
         
@@ -277,10 +328,18 @@ class MultiBlock:
             self,
             hexCount: int,
             blockIndex: str,
-            blockVertexIds: tuple,
+            blockVertices: tuple,
             blockVertexCoordinates: Dict
         ) -> None:
-        """ Define block for a given block id. """
+        """
+        Define block for a given block id.
+
+        Args:
+            hexCount (int): Block/hex id.
+            blockIndex (str): A string representing the x, y, z position of the block in the multi-block
+            blockVertices (tuple): Tuple of 8 instances of the Vertex class
+            blockVertexCoordinates (Dict): Coordinates of the vertex defining the block
+        """
         
         grading = {
             "x" : 1,
@@ -290,13 +349,13 @@ class MultiBlock:
         
         faces = self._define_face(
                 hexCount,
-                *blockVertexIds
+                *blockVertices
             )
         
         self.blocks[hexCount] = Block(
                                         hexCount,
                                         blockIndex,
-                                        blockVertexIds,
+                                        blockVertices,
                                         blockVertexCoordinates,
                                         faces,
                                         self._gridSpacing,
@@ -309,7 +368,6 @@ class MultiBlock:
         
         vertexCount = 0
         
-        # self.vertexCount = 0
         self.zSplitIndex = []
         self.ySplitIndex = []
         self.xSplitIndex = []
@@ -324,12 +382,17 @@ class MultiBlock:
             for j in range(self.nBlock["y"] + 1):
                 yIndex = "y_" + str(j)
                 self.ySplitIndex.append(yIndex)
-                self.vertexGroupDict[zIndex][yIndex] = []
+                self.vertexGroupDict[zIndex][yIndex] = {}
                 
                 for i in range(self.nBlock["x"] + 1):
-                    self.vertices[vertexCount] = (self.xVertices[i], self.yVertices[j], self.zVertices[k])
+                    self.vertices[vertexCount] = Vertex(
+                                                        vertexCount,
+                                                        self.xVertices[i],
+                                                        self.yVertices[j],
+                                                        self.zVertices[k]
+                                                    )
                     self.xSplitIndex.append(self.xVertices[i])
-                    self.vertexGroupDict[zIndex][yIndex].append(vertexCount)
+                    self.vertexGroupDict[zIndex][yIndex][i] = self.vertices[vertexCount]
                     vertexCount += 1
     
     
@@ -338,6 +401,7 @@ class MultiBlock:
         
         blockVertexCoordinates = {}
         hexCount = 0
+        xCount = 0
         
         for iz in range(self.nBlock["z"]):
             zBack = self.zSplitIndex[iz]
@@ -351,7 +415,7 @@ class MultiBlock:
                     if hexCount in self._hex2exclude:
                         pass
                     else:
-                        blockVertexIds = self._define_block_point_order(
+                        blockVertices = self._define_block_point_order(
                                                 zBack, 
                                                 zFront,
                                                 yBottom,
@@ -360,17 +424,18 @@ class MultiBlock:
                                             )
                         blockIndex = "x-" + str(ix) + "_y-" + str(iy) + "_z-" + str(iz)
                         
-                        for iv in blockVertexIds:
-                            blockVertexCoordinates[iv] = self.vertices[iv]
+                        for iv, blockVertex in enumerate(blockVertices):
+                            blockVertexCoordinates[iv] = blockVertex.coordinates()
                         
                         self._define_block(
                                 hexCount,
                                 blockIndex,
-                                blockVertexIds,
+                                blockVertices,
                                 blockVertexCoordinates
                             )
                         
                         hexCount += 1
+                    xCount +=1
         
         return self.blocks
     
