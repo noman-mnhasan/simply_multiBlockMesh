@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/1126855264.svg)](https://doi.org/10.5281/zenodo.18209668)
+
 # Simply multiBlockMesh
 
 **Simply multiBlockMesh** (SimBloM) - Python tool for multi-block **blockMeshDict** (OpenFOAM) generator to create block structured mesh.
