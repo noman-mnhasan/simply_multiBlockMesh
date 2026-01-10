@@ -23,6 +23,7 @@ class Block:
             self,
             id: int,
             index: str,
+            isActive: bool,
             vertices: tuple,
             vertexCoordinates: Dict,
             faces: Dict,
@@ -35,6 +36,7 @@ class Block:
         Args:
             id (int): ID of the block
             index (str): The associated index of the block instance
+            isActive (bool): block status. Included/active is True, excluded/inactive is False
             vertices (tuple): Vertices (Type: Vertex class) used to define the block (needs 8 vertices to define each block)
             vertexCoordinates: Coordinates of the vertex defining the block
             faces (dict): Faces (Type: Face class) used to define the block (needs 6 faces to define each block)
@@ -44,6 +46,7 @@ class Block:
         
         self._id = id
         self._index = index
+        self._isActive = isActive
         self._vertices = vertices
         self._vertexCoordinates = vertexCoordinates
         self._faces = faces
@@ -84,6 +87,20 @@ class Block:
             raise ValueError("Value of 'Block.index' must be a string.")
         
         self._index = value
+    
+    ### Block -> isActive
+    @property
+    def isActive(self) -> bool:
+        return self._isActive
+    
+    @isActive.setter
+    def isActive(self, value: bool):
+        """ Check, raise error and assign value of Block.index """
+        
+        if not isinstance(value, bool):
+            raise ValueError("Value of 'Block.isActive' must be a bool.")
+        
+        self._isActive = value
     
     ### Block -> vertices
     @property

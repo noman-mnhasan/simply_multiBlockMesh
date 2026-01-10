@@ -328,6 +328,7 @@ class MultiBlock:
             self,
             hexCount: int,
             blockIndex: str,
+            isActive: bool,
             blockVertices: tuple,
             blockVertexCoordinates: Dict
         ) -> None:
@@ -337,6 +338,7 @@ class MultiBlock:
         Args:
             hexCount (int): Block/hex id.
             blockIndex (str): A string representing the x, y, z position of the block in the multi-block
+            isActive (bool): block status. Included/active is True, excluded/inactive is False
             blockVertices (tuple): Tuple of 8 instances of the Vertex class
             blockVertexCoordinates (Dict): Coordinates of the vertex defining the block
         """
@@ -355,6 +357,7 @@ class MultiBlock:
         self.blocks[hexCount] = Block(
                                         hexCount,
                                         blockIndex,
+                                        isActive,
                                         blockVertices,
                                         blockVertexCoordinates,
                                         faces,
@@ -413,28 +416,30 @@ class MultiBlock:
                 
                 for ix in range(self.nBlock["x"]):
                     if hexCount in self._hex2exclude:
-                        pass
+                        isActive = False
                     else:
-                        blockVertices = self._define_block_point_order(
-                                                zBack, 
-                                                zFront,
-                                                yBottom,
-                                                yTop,
-                                                ix
-                                            )
-                        blockIndex = "x-" + str(ix) + "_y-" + str(iy) + "_z-" + str(iz)
-                        
-                        for iv, blockVertex in enumerate(blockVertices):
-                            blockVertexCoordinates[iv] = blockVertex.coordinates()
-                        
-                        self._define_block(
-                                hexCount,
-                                blockIndex,
-                                blockVertices,
-                                blockVertexCoordinates
-                            )
-                        
-                        hexCount += 1
+                        isActive = True
+                    blockVertices = self._define_block_point_order(
+                                            zBack, 
+                                            zFront,
+                                            yBottom,
+                                            yTop,
+                                            ix
+                                        )
+                    blockIndex = "x-" + str(ix) + "_y-" + str(iy) + "_z-" + str(iz)
+                    
+                    for iv, blockVertex in enumerate(blockVertices):
+                        blockVertexCoordinates[iv] = blockVertex.coordinates()
+                    
+                    self._define_block(
+                            hexCount,
+                            blockIndex,
+                            isActive,
+                            blockVertices,
+                            blockVertexCoordinates
+                        )
+                    
+                    hexCount += 1
                     xCount +=1
         
         return self.blocks
