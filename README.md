@@ -1,6 +1,6 @@
 # Simply multiBlockMesh
 
-**Simply multiBlockMesh** (SimBloM) - Python tool for multi-block **blockMeshDict** (OpenFOAM) generator to create mesh for complex geometry.
+**Simply multiBlockMesh** (SimBloM) - Python tool for multi-block **blockMeshDict** (OpenFOAM) generator to create block structured mesh.
 
 <img src="./content/image/simply_multiBlockMesh_logo.png" alt="multi-block-bounding-box-split-plane" width="80%" style="display : block; margin : auto;">
 

@@ -134,3 +134,29 @@ class Vertex:
         self.x = collapseTo.x
         self.y = collapseTo.y
         self.z = collapseTo.z
+    
+    def move_collapse(
+            self,
+            newLocation: List,
+            collapseTo: "Vertex"
+        ) -> None:
+        """
+        Collapse the vertex on to another vertex
+
+        Args:
+            newLocation (List): Coordinates of the new location
+            collapseTo (Vertex): Target vertex to collapse to.
+        
+        """
+        
+        if not all([isinstance(i, (int, float)) for i in newLocation]):
+            raise ValueError ("Coordinates of the new location must be either an integer of a float.")
+        
+        collapseTo.x = newLocation[0]
+        collapseTo.y = newLocation[1]
+        collapseTo.z = newLocation[2]
+        
+        self.x = collapseTo.x
+        self.y = collapseTo.y
+        self.z = collapseTo.z
+        
