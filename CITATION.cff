@@ -9,6 +9,8 @@ authors:
     email: noman.mnhasan@gmail.com
     orcid: 'https://orcid.org/0000-0003-1413-6139'
 identifiers:
+  - type: doi
+    value: 10.5281/zenodo.18209669
   - type: url
     value: 'https://github.com/noman-mnhasan/simply_multiBlockMesh'
 repository-code: 'https://github.com/noman-mnhasan/simply_multiBlockMesh'
