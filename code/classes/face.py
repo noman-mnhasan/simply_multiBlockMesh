@@ -18,9 +18,9 @@ class Face:
         Initialize Face instance
         
         Args:
-            block: The associated index of the block instance
-            name: Name of the face --> front, back, left, right, bottom, top
-            vertices: Vertices used to define the face (needs 4 vertices to define each face)
+            block (int): The associated index of the block instance
+            name (str): Name of the face --> front, back, left, right, bottom, top
+            vertices (tuple): Tuple of vertices used to define the face (needs 4 vertices to define each face)
         """
         
         self._block = block
@@ -37,6 +37,11 @@ class Face:
     
     @block.setter
     def block(self, value: int) -> None:
+        """ Check, raise error and assign value of Face.block  """
+        
+        if not isinstance(value, int):
+            raise ValueError("Value of 'Face.block' must be an integer.")
+        
         self._block = value
     
     ### Face - name
@@ -46,16 +51,26 @@ class Face:
     
     @name.setter
     def name(self, value: str) -> None:
+        """ Check, raise error and assign value of Face.name """
+        
         if value not in ["front", "back", "left", "right", "bottom", "top"]:
-            raise ValueError("Face name can only be --> front, back, left, right, bottom, top")
-        else:
-            self._name = value
+            raise ValueError("Value of Face.name can only be --> front, back, left, right, bottom, top")
+        
+        self._name = value
     
     ### Face - vertices
     @property
-    def vertices(self) -> str:
+    def vertices(self) -> tuple:
         return self._vertices
     
     @vertices.setter
-    def vertices(self, value: str) -> None:
+    def vertices(self, value: tuple) -> None:
+        """ Check, raise error and assign value of Face.vertices """
+        
+        if not isinstance(value, tuple):
+            raise ValueError("Value of 'Face.vertices' must be an integer.")
+
+            if not all([isinstance(x, int) for x in value]):
+                raise ValueError("Elements of 'Face.vertices' must be integers.")
+        
         self._vertices = value

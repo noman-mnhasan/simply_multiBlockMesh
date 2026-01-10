@@ -1,6 +1,8 @@
-# Simply MultiBlockMesh
+# Simply multiBlockMesh
 
-Python script for baseline multi-block blockMeshDict generator for complex geometry representation.
+**Simply multiBlockMesh** (SimBloM) - Python tool for multi-block **blockMeshDict** (OpenFOAM) generator to create block structured mesh.
+
+<img src="./content/image/simply_multiBlockMesh_logo.png" alt="multi-block-bounding-box-split-plane" width="80%" style="display : block; margin : auto;">
 
 
 <br>
@@ -59,11 +61,25 @@ For more sophisticated mesh/domain using blockMesh, try tools like [Classy Block
 To create a multi-block blockMeshDict using this script the user need to provide the required information. Below as a sample user input file which can be found in the `input_template` directory.
 
 ```sh
-#! /usr/bin/bash
 
+
+#---------------------------------------
 ### This is the working directory
 ### This shell doesn't need to be in the working directory.
 export_directory="/path/to/the/export/directory"
+
+#---------------------------------------
+### Read multi-block edit file? "yes" or "no"
+read_edit_file="yes"
+
+#---------------------------------------
+### For scaling the mesh
+### All dimensions gets multiplied by
+### the value of "convert_to_meters" globally
+
+convert_to_meters=1
+
+#---------------------------------------
 
 bounding_box='{
     "x-min" : 0.0,
@@ -74,7 +90,7 @@ bounding_box='{
     "z-max" : 1.0
 }'
 
-
+#---------------------------------------
 ### CUT PLANE LIST
 ###
 ### x --> x-coordinate for YZ plane
@@ -87,35 +103,55 @@ split_plane_list='{
     "z" : [0.1, 0.3, 0.6, 0.8]
 }'
 
+#---------------------------------------
+
 gid_spacing='{
     "x" : 0.01,
     "y" : 0.005,
     "z" : 0.01
 }'
 
+#---------------------------------------
+
 hex2exclude='{
     "exclude-list" : []
 }'
 
+#---------------------------------------
+
 export export_directory
+export read_edit_file
 export bounding_box
+export convert_to_meters
 export split_plane_list
 export gid_spacing
 export hex2exclude
 
-
+#---------------------------------------
 ### Provide the path of the python interpreter
 python="path/to/the/python/interpreter"
 
-
+#---------------------------------------
 ### Provide the path where the "simply_multiblockmesh.py" file is located
 ### Make sure the "classes" file and the "case_system_template" directory (with its contents) are also in the same directory.
 simply_multiblockmesh="path/to/the/'simply_multiblockmesh.py'/script/in/local/disk"
 
+#---------------------------------------
+
+VSEP="----------------------------------------"
 
 $python $simply_multiblockmesh
 
+... ... ...
+... ... ..
+
 ```
+
+The `read_edit_file="yes"` tells the SimBloM script to read the `block_edit_*.py` file and implement the edits defined.
+
+For the first run, there will not be a `block_edit_*.py` file. But the SimBloM will create a template file in the working directory during the first run of the tool.
+
+The `convert_to_meters=1` is the blockMesh way of applying a global scaling of the dimension. Choose a value according to the need.
 
 The `bounding_box` contains the min/max of teh overall mesh/domain. This is the overall dimension of the mesh/domain.
 
@@ -145,7 +181,10 @@ working directory
   |               |---- fvSchemes
   |               |---- fvSolution
   |
+  |---- block_edit_[time-stamp].py
+  |---- edge_information.txt
   |---- face_information.txt
+  |---- slice_information.txt
   |---- xyz_locations.txt
 
 ````
@@ -154,9 +193,9 @@ After the first run, the created blockMeshDict will look like the image beklow, 
 
 ```sh
 gid_spacing='{
-    "x" : 10,
-    "y" : 10,
-    "z" : 10
+    "x" : 10000,
+    "y" : 10000,
+    "z" : 10000
 }'
 ```
 
@@ -255,12 +294,58 @@ Once, all the ids of the target block are identified, these ids can be added in 
 <br>
 
 ##### Modifying Blocks
-if any of the block edges needs to be modified to achieve curved topology. Spline and arcs can be added manually to inside the `edges` block.
+if any of the block edges needs to be modified to achieve curved topology. Arc, splice, and polyline can be added, using the `block_edit_*.py` file.
+
+
+Sample arc definition in the `block_edit_*.py` file - 
+
+```python
+
+edgeEdit[1] = {
+    ### Block ID
+    "block-id" : 0,
+    
+    ### Type of edge edit
+    "edit-type" : "make-arc",
+    
+    ### Edge's position in the block (position order insensitive)
+    "edge-position" : ["front", "left"],
+    
+    ### Defining points
+    "arc-point" : [0.38, 0.1, 0.2]
+}
+
+edgeEdit[2] = {
+    ### Block ID
+    "block-id" : 7,
+    
+    ### Type of edge edit
+    "edit-type" : "make-spline",
+    
+    ### Edge's position in the block (position order insensitive)
+    "edge-position" : ["front", "right"],
+    
+    ### Defining points
+    "spline-points" : [
+    		[0.58, 0.2, 0.2],
+    		[0.62, 0.3, 0.2]
+    	]
+}
+
+```
 
 ```C
 edges
 (
-    // edge diginitions
+    arc 25 29 (0.38 0.1 0.2)
+
+    spline 26 30 
+    (
+        (0.58 0.2 0.2)
+        (0.62 0.3 0.2)
+    )
+
+
 );
 
 ```
@@ -270,44 +355,43 @@ edges
 
 ##### Defining Boundary Conditions
 
-When the `simply_multiblockmesh.py` script is executed, one of the files gets created is the `face_information.txt` file. This file contains the face definitions for each blocks defined in the `blockMeshDict`. Here is a snippet of the `face_information.txt` file content - 
+When the `simply_multiblockmesh.py` script is executed, ie creates files to write edge, face, and slice information, in a well organized manner. Here is a snippet of the `face_information.txt` file content - 
 
 ```
+----------------------------------------
 FACE INFO
 ----------------------------------------
 
-### Syntax--> block-[block id]__x-[split location index, x]_y-[split location index, y]_z-[split location index, xz]
+Block-0 : x-0_y-0_z-0
 
-block-0__x-0_y-0_z-0:
-    front  : (0 1 6 5)
-    back   : (25 30 31 26)
-    left   : (0 5 30 25)
-    right  : (26 31 6 1)
-    bottom : (0 25 26 1)
-    top    : (5 6 31 30)
+    front  : (v12 (0.0 0.0 0.1) v16 (0.0 0.5 0.1) v17 (0.4 0.5 0.1) v13 (0.4 0.0 0.1))
+    back   : (v0 (0.0 0.0 0.0) v1 (0.4 0.0 0.0) v5 (0.4 0.5 0.0) v4 (0.0 0.5 0.0))
+    left   : (v0 (0.0 0.0 0.0) v4 (0.0 0.5 0.0) v16 (0.0 0.5 0.1) v12 (0.0 0.0 0.1))
+    right  : (v13 (0.4 0.0 0.1) v17 (0.4 0.5 0.1) v5 (0.4 0.5 0.0) v1 (0.4 0.0 0.0))
+    bottom : (v0 (0.0 0.0 0.0) v12 (0.0 0.0 0.1) v13 (0.4 0.0 0.1) v1 (0.4 0.0 0.0))
+    top    : (v4 (0.0 0.5 0.0) v5 (0.4 0.5 0.0) v17 (0.4 0.5 0.1) v16 (0.0 0.5 0.1))
 
-block-1__x-1_y-0_z-0:
-    front  : (1 2 7 6)
-    back   : (26 31 32 27)
-    left   : (1 6 31 26)
-    right  : (27 32 7 2)
-    bottom : (1 26 27 2)
-    top    : (6 7 32 31)
 
-block-2__x-2_y-0_z-0:
-    front  : (2 3 8 7)
-    back   : (27 32 33 28)
-    left   : (2 7 32 27)
-    right  : (28 33 8 3)
-    bottom : (2 27 28 3)
-    top    : (7 8 33 32)
+Block-1 : x-1_y-0_z-0
 
-... ... ..
+    front  : (v13 (0.4 0.0 0.1) v17 (0.4 0.5 0.1) v18 (0.6 0.5 0.1) v14 (0.6 0.0 0.1))
+    back   : (v1 (0.4 0.0 0.0) v2 (0.6 0.0 0.0) v6 (0.6 0.5 0.0) v5 (0.4 0.5 0.0))
+    left   : (v1 (0.4 0.0 0.0) v5 (0.4 0.5 0.0) v17 (0.4 0.5 0.1) v13 (0.4 0.0 0.1))
+    right  : (v14 (0.6 0.0 0.1) v18 (0.6 0.5 0.1) v6 (0.6 0.5 0.0) v2 (0.6 0.0 0.0))
+    bottom : (v1 (0.4 0.0 0.0) v13 (0.4 0.0 0.1) v14 (0.6 0.0 0.1) v2 (0.6 0.0 0.0))
+    top    : (v5 (0.4 0.5 0.0) v6 (0.6 0.5 0.0) v18 (0.6 0.5 0.1) v17 (0.4 0.5 0.1))
+
+
+... ... ...
 ... ... ...
 
 ```
 
 <br>
+
+These files, along with visually identifying blocks (using ParaView), users can easily define `boundary definition` in the `block_edit_*.py` file.
+
+
 Using the information saved in the `face_information.txt` file, boundary conditions (patches) can be defined (manually). Re-run`blockMesh`after defining the boundaries.
 
 

@@ -11,6 +11,7 @@ from typing import (
 
 from lib import (
     VSEP,
+    ofCaseTemplateDirname,
     hl
 )
 
@@ -62,8 +63,28 @@ class Setup:
                 self._caseDir + os.sep + "system",
             ]
         
-        self._templateDirname = "case_system_template"
+        self._templateDirname = ofCaseTemplateDirname
         self._templateDir = self._scriptDir + os.sep + self._templateDirname
+    
+    @property
+    def scriptDir(self) -> None:
+        return self._scriptDir
+    
+    @scriptDir.setter
+    def scriptDir(self, value) -> None:
+        """  """
+        
+        self._scriptDir = value
+    
+    @property
+    def caseDir(self) -> None:
+        return self._caseDir
+    
+    @caseDir.setter
+    def caseDir(self, value) -> None:
+        """  """
+        
+        self._caseDir = value
     
     def remove_case_dir(self) -> bool:
         """ Check path if the path exists  """
@@ -124,9 +145,19 @@ class Setup:
     def blockmeshdict(
             self,
             convertToMeters: float,
-            mb: mbc.MultiBlock
+            mb: mbc.MultiBlock,
+            edgeDefinition: List,
+            boundaryDefinition: List
         ) -> None:
-        """ Generate the content of blockMeshDict and write in file """
+        """
+        Generate the content of blockMeshDict and write in file
+
+        Args:
+            convertToMeters (float): "convertToMeter" value for blockMeshDict
+            mb (mbc.MultiBlock): MultiBlock object
+            edgeDefinition (List): Definition of edge modifications to add to blockMeshDict
+            boundaryDefinition (List): Definition of boundary to add to blockMeshDict
+        """
         
         wspace = " "
         indent = wspace * 4    
@@ -151,7 +182,7 @@ class Setup:
                     yCount = 1
                     zCount += 1            
                 dictContent += "\n" + (indent * 1) + "// ==== y-" + str(yCount) + ", z-" + str(zCount) + " ==== //\n\n"        
-            dictContent += (indent * 1) + "(" + " ".join([str(x) for x in v]) + ")    // vertex-" + str(k) + "\n"
+            dictContent += (indent * 1) + "(" + " ".join([str(i) for i in [v.x, v.y, v.z]]) + ")    // vertex-" + str(k) + "\n"
             count += 1
         
         dictContent += ");\n"
@@ -167,16 +198,24 @@ class Setup:
             nzs = f"{nz}"
             
             dictContent += (indent * 1) + "// ==== Block-" + str(k) + ", Index : "  +  str(v.index) + " ==== //\n"
-            dictContent += (indent * 1) + "hex (" + " ".join([f"{x:3}" for x in mb.blocks[k].vertices]) + ") (" + nxs + " " + nys + " " + nzs + ") simpleGrading (1 1 1)" + "\n\n"
+            dictContent += (indent * 1) + "hex (" + " ".join([f"{x:3}" for x in [v.id for v in mb.blocks[k].vertices]]) + ") (" + nxs + " " + nys + " " + nzs + ") simpleGrading (1 1 1)" + "\n\n"
         
         dictContent += ");\n"
         dictContent += "\n"
         dictContent += "edges\n"
         dictContent += "(\n"
+        
+        for entry in edgeDefinition:
+            dictContent += entry + "\n\n"
+        
         dictContent += ");\n"
         dictContent += "\n"
         dictContent += "boundary\n"
         dictContent += "(\n"
+        
+        for entry in boundaryDefinition:
+            dictContent += entry + "\n\n"
+        
         dictContent += ");\n"
         dictContent += "\n"
         dictContent += "mergePatchPair\n"
