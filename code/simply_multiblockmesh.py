@@ -114,6 +114,10 @@ def make_multi_block_blockmeshdict(
     ### Update multi-block based on "edit task(s)"
     ### Read edit entries
     edit.does_file_exists()
+    if not edit.fileExist:
+        hl()
+        print("File 'block_edit_*.py' doesn't exist")
+    
     if edit.fileExist:
         if need2modify:
             edit.read()

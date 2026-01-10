@@ -161,6 +161,13 @@ class Edit:
                 vertices[task["id"]].collapse(
                         vertices[task["target-vertex"]]
                     )
+            
+            ### Move_Collapse vertices
+            if task["edit-type"].lower() == "move-collapse":
+                vertices[task["id"]].move_collapse(
+                        task["new-location"],
+                        vertices[task["target-vertex"]]
+                    )
     
     def execute_edge_operation(
             self,

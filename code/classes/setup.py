@@ -190,15 +190,24 @@ class Setup:
         dictContent += "blocks\n"
         dictContent += "(\n"
         
-        for k, v in mb.blocks.items():
+        # for k, iblock in mb.blocks.items():
+        #     hl()
+        #     print(f"Block id - {iblock.id:3} | Active? - {iblock.isActive}")
+        # exit(-1)
+        
+        for k, iblock in mb.blocks.items():
+            
+            if iblock.isActive == False:
+                continue
+            
             nx, ny, nz = mb.blocks[k].get_spacing()
             
             nxs = f"{nx}"
             nys = f"{ny}"
             nzs = f"{nz}"
             
-            dictContent += (indent * 1) + "// ==== Block-" + str(k) + ", Index : "  +  str(v.index) + " ==== //\n"
-            dictContent += (indent * 1) + "hex (" + " ".join([f"{x:3}" for x in [v.id for v in mb.blocks[k].vertices]]) + ") (" + nxs + " " + nys + " " + nzs + ") simpleGrading (1 1 1)" + "\n\n"
+            dictContent += (indent * 1) + "// ==== Block-" + str(k) + ", Index : "  +  str(iblock.index) + " ==== //\n"
+            dictContent += (indent * 1) + "hex (" + " ".join([f"{x:3}" for x in [v.id for v in iblock.vertices]]) + ") (" + nxs + " " + nys + " " + nzs + ") simpleGrading (1 1 1)" + "\n\n"
         
         dictContent += ");\n"
         dictContent += "\n"
