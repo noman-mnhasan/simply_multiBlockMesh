@@ -141,7 +141,7 @@ class Vertex:
             collapseTo: "Vertex"
         ) -> None:
         """
-        Collapse the vertex on to another vertex
+        Collapse the vertex on to another vertex and then move to a new position
 
         Args:
             newLocation (List): Coordinates of the new location
