@@ -244,4 +244,66 @@ class Edge:
         
         self.start.move(newLocationStart)
         self.end.move(newLocationEnd)
+    
+    def collapse(
+            self,
+            collapseTo: "Edge"
+        ) -> None:
+        """
+        Collapse the edge on to another edge
+
+        Args:
+            collapseTo (edge): Target edge to collapse to.
+        """
+        
+        self.start.x = collapseTo.start.x
+        self.start.y = collapseTo.start.y
+        self.start.z = collapseTo.start.z
+        
+        self.end.x = collapseTo.end.x
+        self.end.y = collapseTo.end.y
+        self.end.z = collapseTo.end.z
+    
+    def move_collapse(
+            self,
+            delta: List,
+            collapseTo: "Edge"
+        ) -> None:
+        """
+        Collapse the edge on to another edge and then move to a new position
+
+        Args:
+            delta (List): Coordinates of the new location
+            collapseTo (Edge): Target edge to collapse to.
+        
+        """
+        
+        is_vertex_coordinate_valid(delta)
+        
+        ### Edge-start
+        startCoordinate = collapseTo.start.coordinates()
+        newLocationStart = (
+                startCoordinate[0] + delta[0],
+                startCoordinate[1] + delta[1],
+                startCoordinate[2] + delta[2]
+            )
+        
+        ### Edge-end
+        endCoordinate = collapseTo.end.coordinates()
+        newLocationEnd = (
+                endCoordinate[0] + delta[0],
+                endCoordinate[1] + delta[1],
+                endCoordinate[2] + delta[2]
+            )
+        
+        collapseTo.start.move(newLocationStart)
+        collapseTo.end.move(newLocationEnd)
+        
+        self.start.x = collapseTo.start.x
+        self.start.y = collapseTo.start.y
+        self.start.z = collapseTo.start.z
+        
+        self.end.x = collapseTo.end.x
+        self.end.y = collapseTo.end.y
+        self.end.z = collapseTo.end.z
         
