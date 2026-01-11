@@ -82,6 +82,12 @@ With **Simply multiBlockMesh**, the user needs to think about the mesh from a "b
 
 <br>
 
+### User Manual
+
+Detailed explanation with examples on how to use the **Simply multiBlockMesh** can be found in the [user manual](./manual/README.md) sectio.
+
+<br>
+
 ### How To Use
 
 1. Download the **code** directory.

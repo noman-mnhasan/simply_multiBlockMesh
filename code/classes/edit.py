@@ -169,15 +169,42 @@ class Edit:
                         vertices[task["target-vertex"]]
                     )
     
+    def get_edge(
+            self,
+            block: Block,
+            edgePosition: List
+        ) -> Edge:
+        """
+        Get the Edge object for a given Block and edge location
+
+        Args:
+            blocks (Block): The Block object where the edge is location
+            edgePosition (List): List of strings defining the edge location
+
+        Returns:
+            Edge: The identified edge object
+        """
+        
+        edgeLocationIndex = get_block_edge_location(edgePosition)
+            
+        if edgeLocationIndex not in range(12):
+            raise ValueError("Edge location specification not recognized")
+        
+        edge = block.edges[edgeLocationIndex]
+        
+        return edge
+        
+    
+    
     def execute_edge_operation(
             self,
-            blocks
+            blocks: Dict
         ) -> None:
         """
         Execute user provided edge edit operations
 
         Args:
-            blocks (Block): Dictionary of the "Blocks" objects defining the multi-block
+            blocks (dict): Dictionary of the "Blocks" objects defining the multi-block
 
         Raises:
             ValueError: For improper edge definitions
@@ -186,15 +213,30 @@ class Edit:
         for taskId, task in self.task.edgeEdit.items():
             
             ### Identify edge
-            edgeLocationIndex = get_block_edge_location(task["edge-position"])
-            edge = blocks[task["block-id"]].edges[edgeLocationIndex]
-            
-            if edgeLocationIndex not in range(12):
-                raise ValueError("Edge location specification not recognized")
+            edge = self.get_edge(
+                    blocks[task["block-id"]],
+                    task["edge-position"]
+                )
+            if "target-edge" in task.keys():
+                targetEdge = self.get_edge(
+                        blocks[task["target-edge"]["block-id"]],
+                        task["target-edge"]["edge-position"]
+                    )
             
             ### Moving edge
             if task["edit-type"].lower() == "move":
                 edge.move(task["delta"])
+            
+            ### Collapsing edge
+            if task["edit-type"].lower() == "collapse":
+                edge.collapse(targetEdge)
+            
+            ### Moving-collapsing edge
+            if task["edit-type"].lower() == "move-collapse":
+                edge.move_collapse(
+                        task["delta"],
+                        targetEdge
+                    )
             
             ### Create arc definition
             if task["edit-type"].lower() == "make-arc":
