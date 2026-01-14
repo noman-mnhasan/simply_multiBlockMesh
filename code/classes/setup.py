@@ -190,11 +190,6 @@ class Setup:
         dictContent += "blocks\n"
         dictContent += "(\n"
         
-        # for k, iblock in mb.blocks.items():
-        #     hl()
-        #     print(f"Block id - {iblock.id:3} | Active? - {iblock.isActive}")
-        # exit(-1)
-        
         for k, iblock in mb.blocks.items():
             
             if iblock.isActive == False:

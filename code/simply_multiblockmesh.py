@@ -94,6 +94,15 @@ def make_multi_block_blockmeshdict(
     ### Calculate/prepare dictionary data
     mb.make()
     
+    print("\n\n")
+    hl()
+    print("Multi-block indices for blocks:")
+    hl()
+    for blockName, iBlock in mb.blocks.items():
+        print(f"Block-{iBlock.id} | Indices - {iBlock.multiBlockIndex}")
+        
+    
+    
     ### Run blockMesh setup
     setup.run()
     
@@ -122,10 +131,7 @@ def make_multi_block_blockmeshdict(
         if need2modify:
             edit.read()
             ### Performing edits
-            edit.execute(
-                    mb.vertices,
-                    mb.blocks
-                )
+            edit.execute(mb)
         else:
             hl()
             print(f"Execute multi-block edit? - {need2modify}")

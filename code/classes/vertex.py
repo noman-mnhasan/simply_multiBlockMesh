@@ -156,7 +156,7 @@ class Vertex:
         collapseTo.y = newLocation[1]
         collapseTo.z = newLocation[2]
         
-        self.x = collapseTo.x
-        self.y = collapseTo.y
-        self.z = collapseTo.z
+        self.x = newLocation[0]
+        self.y = newLocation[1]
+        self.z = newLocation[2]
         

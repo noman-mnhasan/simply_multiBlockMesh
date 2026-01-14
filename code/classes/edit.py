@@ -13,13 +13,13 @@ from lib import (
     wspace,
     indent,
     VSEP,
-    hl,
-    get_block_edge_location
+    hl
 )
 
 from .block import *
 from .edge import *
 from .face import *
+from .multiblock import *
 from .vertex import *
 
 
@@ -58,7 +58,7 @@ class Edit:
     
     @filename.setter
     def filename(self, value: str) -> None:
-        """ Check, raise error and assign value of Edit.filename"""
+        """ Check, raise error and assign value of Edit.filename """
         
         if not isinstance(value, str):
             raise ValueError("Edit input filename must be a string.")
@@ -80,7 +80,7 @@ class Edit:
     
     @task.setter
     def task(self, value: types.ModuleType) -> None:
-        """ Check, raise error and assign value of Edit.task """
+        """  """
                 
         self._task = value
     
@@ -129,7 +129,7 @@ class Edit:
         modulePath = self._workingDir + os.sep + self.filename
         hl()
         print(f"Module name : {moduleName}")
-        # print(f"Module Dir  : {self._workingDir}")
+        
         spec = importlib.util.spec_from_file_location(
                                     moduleName,
                                     modulePath
@@ -168,31 +168,6 @@ class Edit:
                         task["new-location"],
                         vertices[task["target-vertex"]]
                     )
-    
-    def get_edge(
-            self,
-            block: Block,
-            edgePosition: List
-        ) -> Edge:
-        """
-        Get the Edge object for a given Block and edge location
-
-        Args:
-            blocks (Block): The Block object where the edge is location
-            edgePosition (List): List of strings defining the edge location
-
-        Returns:
-            Edge: The identified edge object
-        """
-        
-        edgeLocationIndex = get_block_edge_location(edgePosition)
-            
-        if edgeLocationIndex not in range(12):
-            raise ValueError("Edge location specification not recognized")
-        
-        edge = block.edges[edgeLocationIndex]
-        
-        return edge
         
     
     
@@ -213,13 +188,11 @@ class Edit:
         for taskId, task in self.task.edgeEdit.items():
             
             ### Identify edge
-            edge = self.get_edge(
-                    blocks[task["block-id"]],
+            edge = task["block-id"].find_edge(
                     task["edge-position"]
                 )
             if "target-edge" in task.keys():
-                targetEdge = self.get_edge(
-                        blocks[task["target-edge"]["block-id"]],
+                targetEdge = task["block-id"].find_edge(
                         task["target-edge"]["edge-position"]
                     )
             
@@ -255,6 +228,74 @@ class Edit:
                 self.edgeDefinition.append(
                         edge.spline(task["polyline-points"])
                     )
+        
+    
+    
+    def execute_block_operation(
+            self,
+            mb: MultiBlock
+        ) -> None:
+        
+        for taskId, task in self.task.blockEdit.items():
+            
+            ### Making quadrant
+            if task["edit-type"].lower() == "make-quadrant":
+                slicePlane, sliceIndex = self.get_slice_info_from_block_pair(
+                        mb.blocks[task["starting-block-id"]],
+                        mb.blocks[task["ending-block-id"]]
+                    )
+                self.edgeDefinition.extend(
+                    mb.make_quadrant(
+                            task["block-face"],
+                            task["starting-block-id"],
+                            task["ending-block-id"],
+                            task["radius"],
+                            slicePlane,
+                            sliceIndex
+                        )
+                    )
+    
+        
+    def get_slice_info_from_block_pair(
+            self,
+            block1: Block,
+            block2: Block
+        ) -> tuple:
+        """
+        Compares multi-block index between two blocks.
+        Get matching "slice plane" and matching "slice index"
+
+        Args:
+            blockPair (Block): One of the two blocks to be compared
+            blockPair (Block): The other block to be compared
+
+        Returns:
+            tuple: (matching slice plane, index of the matching slice plane)
+        """
+        
+        planeMatchIndexMap = {
+            0 : "yz",
+            1 : "zx",
+            2 : "xy"
+        }
+        
+        gridIndexBlock1 = block1.multiBlockIndex
+        gridIndexBlock2 = block2.multiBlockIndex
+        
+        gridIndexCompare = [
+            gridIndexBlock1[0] == gridIndexBlock2[0],
+            gridIndexBlock1[1] == gridIndexBlock2[1],
+            gridIndexBlock1[2] == gridIndexBlock2[2],
+        ]
+        
+        matchedIndex = gridIndexCompare.index(True)
+        slicePlane = planeMatchIndexMap[matchedIndex]
+        sliceIndex = gridIndexBlock1[matchedIndex]
+        
+        return (
+            slicePlane,
+            sliceIndex
+        )
     
     def define_boundaries(
             self,
@@ -288,8 +329,7 @@ class Edit:
     
     def execute(
             self,
-            vertices: Dict,
-            blocks: Dict,
+            mb: MultiBlock,
         ) -> None:
         """
         Execute edits defined in task
@@ -299,21 +339,41 @@ class Edit:
             blocks (Dict): Dictionary of "Block" objects defining the multi-block.
         """
         
-        taskTypes = [
-            self.task.vertexEdit,
-            self.task.edgeEdit,
-            self.task.boundary
+        taskTypeCheck = [
+            "vertexEdit", 
+            "edgeEdit",
+            "blockEdit",
+            "boundary",
         ]
+        
+        taskTypes = []
+        
+        hl()
+        for taskType in taskTypeCheck:
+            if hasattr(self.task, taskType):
+                status = True
+                taskTypes.append(getattr(self.task, taskType))
+            else:
+                status = False
+            print(f"Task type - {taskType:12} exists? - {status}")
         
         if not any([bool(x) for x in taskTypes]):
             print("No edit task found!!")
             return
+        
+        vertices =  mb.vertices,
+        blocks = mb.blocks,
+        slices = mb.slices
+            
         
         ### Vertex operations
         self.execute_vertex_operation(vertices)
         
         ### Edge operations
         self.execute_edge_operation(blocks)
+        
+        ### Block operations
+        self.execute_block_operation(mb)
         
         ## Define boundaries
         self.define_boundaries(blocks)

@@ -51,6 +51,7 @@ class Block:
         self._vertexCoordinates = vertexCoordinates
         self._faces = faces
         self._edges = None
+        self._multiBlockIndex = None
         self._spacing = spacing
         self._grading = grading
         self._dx = self._spacing["x"]
@@ -161,11 +162,27 @@ class Block:
         """ Check, raise error and assign value of Block.edges """
         
         if not isinstance(value, tuple):
-            raise ValueError("Value of 'Block.edges' must be a dictionary.")
+            raise ValueError("Value of 'Block.edges' must be a tuple.")
             if not all([isinstance(x, Edge) for x in value]):
                 raise ValueError("Elements of 'Block.edges' must be instances of 'edge' class.")
         
         self._edges = value
+    
+    ### Block -> multiBlockIndex
+    @property
+    def multiBlockIndex(self):
+        return self._multiBlockIndex
+    
+    @multiBlockIndex.setter
+    def multiBlockIndex(self, value: tuple) -> None:
+        """  """
+        
+        if not isinstance(value, tuple):
+            raise ValueError("Value of 'Block.multiBlockIndex' must be a tuple.")
+            if not all([isinstance(x, int) for x in value]):
+                raise ValueError("Elements of of 'Block.multiBlockIndex' must be integers.")
+        
+        self._multiBlockIndex = value
     
     ### Block -> spacing
     @property
@@ -240,6 +257,82 @@ class Block:
                 Edge(10, "z", "right-bottom", self.vertices[1], self.vertices[5]),
                 Edge(11, "z", "right-top", self.vertices[2], self.vertices[6]),
             )
+    
+
+    def get_block_edge_location(
+            self,
+            locationStringList: List[str]
+        ) -> int:
+        """
+        Get location/index of the edge from the edge description
+
+        Args:
+            locationStringList (List[str]): 
+                List of two of the following strings - 
+                front, back, left, right, top, bottom
+
+        Raises:
+            ValueError: if a valid edge position index is not found
+
+        Returns:
+            int: position index of an edge in a block
+        """
+        
+        if len(locationStringList) != 2:
+            raise ValueError("Edge location specification list must have 2 elements (string)")
+        
+        locationString1 = f"{locationStringList[0]}-{locationStringList[1]}"
+        locationString2 = f"{locationStringList[1]}-{locationStringList[0]}"
+        
+        edgePosition = [
+                    "back-bottom",
+                    "back-top",
+                    "front-bottom",
+                    "front-top",
+                    "back-left",
+                    "back-right",
+                    "front-left",
+                    "front-right",
+                    "left-bottom",
+                    "left-top",
+                    "right-bottom",
+                    "right-top"
+                ]
+        
+        edgeLocationIndex = None
+        
+        for locationString in [locationString1, locationString2]:
+            if locationString in edgePosition:
+                edgeLocationIndex = edgePosition.index(locationString)
+            
+        # print(f"Edge location index : {edgeLocationIndex}")
+        
+        return edgeLocationIndex
+
+
+    def find_edge(
+            self,
+            edgePosition: List
+        ) -> Edge:
+        """
+        Get the Edge object for a given Block and edge location
+
+        Args:
+            blocks (Block): The Block object where the edge is location
+            edgePosition (List): List of strings defining the edge location
+
+        Returns:
+            Edge: The identified edge object
+        """
+        
+        edgeLocationIndex = self.get_block_edge_location(edgePosition)
+            
+        if edgeLocationIndex not in range(12):
+            raise ValueError("Edge location specification not recognized")
+        
+        edge = self.edges[edgeLocationIndex]
+        
+        return edge
     
     def _get_hex(self) -> str:
         """ Define the block hex. """

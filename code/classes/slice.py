@@ -75,4 +75,3 @@ class Slice:
                 raise ValueError("Elements of 'Slice.blocks' must be integers.")
         
         self._blocks = value
-        
