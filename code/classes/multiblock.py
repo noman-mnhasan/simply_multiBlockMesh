@@ -117,6 +117,30 @@ class MultiBlock:
         ySplitCoordinate = sorted(self.splitPlanes["y"])
         zSplitCoordinate = sorted(self.splitPlanes["z"])
         
+        xMinOutOfBound = any([i < self.boundingBox["x-min"] for i in xSplitCoordinate])
+        xMaxOutOfBound = any([i > self.boundingBox["x-max"] for i in xSplitCoordinate])
+        
+        yMinOutOfBound = any([i < self.boundingBox["y-min"] for i in ySplitCoordinate])
+        yMaxOutOfBound = any([i > self.boundingBox["y-max"] for i in ySplitCoordinate])
+        
+        zMinOutOfBound = any([i < self.boundingBox["z-min"] for i in zSplitCoordinate])
+        zMaxOutOfBound = any([i > self.boundingBox["z-max"] for i in zSplitCoordinate])
+        
+        # hl()
+        # print(f"Split-plane, X-min out-of-bound : {xMinOutOfBound}")
+        # print(f"Split-plane, X-max out-of-bound : {xMaxOutOfBound}")
+        # print(f"Split-plane, Y-min out-of-bound : {yMinOutOfBound}")
+        # print(f"Split-plane, Y-max out-of-bound : {yMaxOutOfBound}")
+        # print(f"Split-plane, Z-min out-of-bound : {zMinOutOfBound}")
+        # print(f"Split-plane, Z-max out-of-bound : {zMaxOutOfBound}")
+        
+        if True in [
+                xMinOutOfBound, xMaxOutOfBound, 
+                yMinOutOfBound, yMaxOutOfBound,
+                zMinOutOfBound, zMaxOutOfBound
+            ]:
+            raise ValueError("Split plane location is outside of the user defined bounding box.")
+        
         self.xVertices.append(self.boundingBox["x-min"])
         if bool(xSplitCoordinate):
             self.xVertices.extend(xSplitCoordinate)
