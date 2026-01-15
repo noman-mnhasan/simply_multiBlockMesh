@@ -48,7 +48,8 @@ class Setup:
             caseDir: str,
             
         ) -> None:
-        """_summary_
+        """
+        Initialize Setup instance
 
         Args:
             templateDir (str): Directory where the template case files are stored
@@ -71,8 +72,11 @@ class Setup:
         return self._scriptDir
     
     @scriptDir.setter
-    def scriptDir(self, value) -> None:
-        """  """
+    def scriptDir(self, value: str) -> None:
+        """ Check, raise error and assign value of Setup.scriptDir """
+        
+        if not isinstance(value, str):
+            raise ValueError("Value of Setup.scriptDir must be a string")
         
         self._scriptDir = value
     
@@ -81,8 +85,11 @@ class Setup:
         return self._caseDir
     
     @caseDir.setter
-    def caseDir(self, value) -> None:
-        """  """
+    def caseDir(self, value: str) -> None:
+        """ Check, raise error and assign value of Setup.caseDir """
+        
+        if not isinstance(value, str):
+            raise ValueError("Value of Setup.caseDir must be a string")
         
         self._caseDir = value
     
@@ -103,7 +110,7 @@ class Setup:
         print("OpenFoam case directory for blockMesh cleared!")
     
     def make_case_dir(self) -> None:
-        """  """
+        """ Setup openfoam case directory to run blockMesh """
         
         for item in self._caseSubDirs:
             directory = item.split(os.sep)[-1]
@@ -114,7 +121,7 @@ class Setup:
                 hl()
                 print(f"Error creating the \"{directory}\" directory.")
                 print("Aborting ... ...")
-                exit()
+                exit(-2)
         
     def create_foam_file(self) -> None:
         """ Creating a *.foam file for ease of use with ParaView """

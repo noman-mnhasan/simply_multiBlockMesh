@@ -21,6 +21,8 @@ from lib import (
     wspace,
     indent,
     VSEP,
+    quadrantEdgeRule,
+    slicePlaneAxisIndex,
     hl
 )
 
@@ -493,6 +495,7 @@ class MultiBlock:
                     hexCount += 1
                     xCount +=1
         
+        
         return self.blocks
     
     def get_slices(self) -> None:
@@ -568,19 +571,12 @@ class MultiBlock:
                                         )
     
     def assign_multiblock_index_to_block(self) -> None:
-        """ """
-        
-        # hl()
-        # print(f"self.slices['xy'] : {self.slices['xy']}")
-        # print(f"self.slices['yz'] : {self.slices['yz']}")
-        # print(f"self.slices['zx'] : {self.slices['zx']}")
-        # exit(-1)
+        """ Assign (x, y, z) index to blocks in the multi-block grid """
         
         xIndexCount = 0
         yIndexCount = 0
         zIndexCount = 0
         
-        hl()
         for i in range(len(self.blocks)):
             self.blocks[i].multiBlockIndex = (xIndexCount, yIndexCount, zIndexCount)
             xIndexCount += 1
@@ -603,12 +599,8 @@ class MultiBlock:
         for blockId, iBlock in self.blocks.items():
             ix, iy, iz = iBlock.multiBlockIndex
             blockGrid[ix][iy][iz] = iBlock
-        
-        ### Converting the nested defaultdict to standard dictionary
-        for k,v in blockGrid.items():
-            blockGrid[k] = dict(v)
             
-        self.blockGrid = dict(blockGrid)
+        self.blockGrid = blockGrid
     
     def make(self) -> None:
         """ Run the multi-block operations """
@@ -730,7 +722,8 @@ class MultiBlock:
             multiblockIndex1Corner,
             multiblockIndex2Corner,
         ) -> int:
-        """_summary_
+        """
+        Get the quadrant number (1, 2, 3, 4) based on the definition of the staring and end block selection
 
         Args:
             multiblockIndex1Center (int): Axis index for center block. 0 for x, 1 for y, 2 for z
@@ -739,7 +732,7 @@ class MultiBlock:
             multiblockIndex2Corner (int): Axis index for corner block. 0 for x, 1 for y, 2 for z
 
         Returns:
-            int: _description_
+            int: The quadrant number based on the block selection
         """
         
         ### 1 --> 1st quadrant
@@ -769,20 +762,11 @@ class MultiBlock:
     
     ### TOO LONG - NEED TO SIMPLIFY ###
     
-    def get_quadrant_block_details(
+    def get_block_shift_coefficient_for_quadrant(
             self,
-            centerBlock,
-            slicePlane,
-            quadrantNumber,
-        ) -> dict:
-        
-        quadrantInfo = {}
-        
-        ix, iy, iz = centerBlock.multiBlockIndex
-        
-        # hl()
-        # print(f"Quadrant number : {quadrantNumber}")
-        # exit(-1)
+            quadrantNumber
+        ) -> int:
+        """ Set the multi-block index offset to select the top and side bloc, relative to the center block. """
         
         if quadrantNumber == 1:
             topShift = 1
@@ -796,6 +780,23 @@ class MultiBlock:
         elif quadrantNumber == 4:
             topShift = -1
             sideShift = 1
+        return (
+                topShift,
+                sideShift
+            )
+    
+    def get_top_block_for_quadrant(
+            self,
+            slicePlane,
+            centerBlockGridPosition,
+            topShift
+        ) -> Block:
+        """
+        Get the top-block in reference to the center-block (the block 
+        that contains the axis of the quadrant) of the quadrant
+        """
+        
+        ix, iy, iz = centerBlockGridPosition
         
         if slicePlane == "xy":
             topBlock = self.get_block_with_multiblock_index(
@@ -805,67 +806,6 @@ class MultiBlock:
                         iz
                     )
                 )
-            
-            sideBlock = self.get_block_with_multiblock_index(
-                    (
-                        ix + sideShift,
-                        iy,
-                        iz
-                    )
-                )
-            
-            if quadrantNumber == 1:
-                collapseEdgeDirection = ["top", "right"]
-                axisEdgeDirection = ["bottom", "left"]
-                arcEdgeDirection = {
-                        "top-block" : [
-                                ["top", "front"],
-                                ["top", "back"]
-                            ],
-                        "side-block" : [
-                                ["right", "front"],
-                                ["right", "back"]
-                            ],
-                    }
-            if quadrantNumber == 2:
-                collapseEdgeDirection = ["top", "left"]
-                axisEdgeDirection = ["bottom", "right"]
-                arcEdgeDirection = {
-                        "top-block" : [
-                                ["top", "front"],
-                                ["top", "back"]
-                            ],
-                        "side-block" : [
-                                ["left", "front"],
-                                ["left", "back"]
-                            ],
-                    }
-            if quadrantNumber == 3:
-                collapseEdgeDirection = ["bottom", "left"]
-                axisEdgeDirection = ["top", "right"]
-                arcEdgeDirection = {
-                        "top-block" : [
-                                ["bottom", "front"],
-                                ["bottom", "back"]
-                            ],
-                        "side-block" : [
-                                ["left", "front"],
-                                ["left", "back"]
-                            ],
-                    }
-            if quadrantNumber == 4:
-                collapseEdgeDirection = ["bottom", "right"]
-                axisEdgeDirection = ["top", "left"]
-                arcEdgeDirection = {
-                        "top-block" : [
-                                ["bottom", "front"],
-                                ["bottom", "back"]
-                            ],
-                        "side-block" : [
-                                ["right", "front"],
-                                ["right", "back"]
-                            ],
-                    }
         
         elif slicePlane == "yz":
             topBlock = self.get_block_with_multiblock_index(
@@ -875,67 +815,6 @@ class MultiBlock:
                         iz + topShift
                     )
                 )
-            
-            sideBlock = self.get_block_with_multiblock_index(
-                    (
-                        ix,
-                        iy + sideShift,
-                        iz
-                    )
-                )
-            
-            if quadrantNumber == 1:
-                collapseEdgeDirection = ["top", "front"]
-                axisEdgeDirection = ["bottom", "back"]
-                arcEdgeDirection = {
-                        "top-block" : [
-                                ["front", "right"],
-                                ["front", "left"]
-                            ],
-                        "side-block" : [
-                                ["top", "right"],
-                                ["top", "left"]
-                            ],
-                    }
-            if quadrantNumber == 2:
-                collapseEdgeDirection = ["bottom", "front"]
-                axisEdgeDirection = ["top", "back"]
-                arcEdgeDirection = {
-                        "top-block" : [
-                                ["front", "right"],
-                                ["front", "left"]
-                            ],
-                        "side-block" : [
-                                ["bottom", "right"],
-                                ["bottom", "left"]
-                            ],
-                    }
-            if quadrantNumber == 3:
-                collapseEdgeDirection = ["bottom", "back"]
-                axisEdgeDirection = ["top", "front"]
-                arcEdgeDirection = {
-                        "top-block" : [
-                                ["back", "right"],
-                                ["back", "left"]
-                            ],
-                        "side-block" : [
-                                ["bottom", "right"],
-                                ["bottom", "left"]
-                            ],
-                    }
-            if quadrantNumber == 4:
-                collapseEdgeDirection = ["top", "back"]
-                axisEdgeDirection = ["bottom", "front"]
-                arcEdgeDirection = {
-                        "top-block" : [
-                                ["back", "right"],
-                                ["back", "left"]
-                            ],
-                        "side-block" : [
-                                ["top", "right"],
-                                ["top", "left"]
-                            ],
-                    }
         
         elif slicePlane == "zx":
             topBlock = self.get_block_with_multiblock_index(
@@ -945,6 +824,40 @@ class MultiBlock:
                         iz
                     )
                 )
+        return topBlock
+    
+    def get_side_block_for_quadrant(
+            self,
+            slicePlane,
+            centerBlockGridPosition,
+            sideShift
+        ) -> Block:
+        """
+        Get the side-block in reference to the center-block (the block 
+        that contains the axis of the quadrant) of the quadrant
+        """
+        
+        ix, iy, iz = centerBlockGridPosition
+        
+        if slicePlane == "xy":
+            sideBlock = self.get_block_with_multiblock_index(
+                    (
+                        ix + sideShift,
+                        iy,
+                        iz
+                    )
+                )
+        
+        elif slicePlane == "yz":
+            sideBlock = self.get_block_with_multiblock_index(
+                    (
+                        ix,
+                        iy + sideShift,
+                        iz
+                    )
+                )
+        
+        elif slicePlane == "zx":
             sideBlock = self.get_block_with_multiblock_index(
                     (
                         ix,
@@ -952,64 +865,37 @@ class MultiBlock:
                         iz + sideShift
                     )
                 )
-            
-            if quadrantNumber == 1:
-                collapseEdgeDirection = ["front", "right"]
-                axisEdgeDirection = ["back", "left"]
-                arcEdgeDirection = {
-                        "top-block" : [
-                                ["right", "top"],
-                                ["right", "bottom"]
-                            ],
-                        "side-block" : [
-                                ["front", "top"],
-                                ["front", "bottom"]
-                            ],
-                    }
-            if quadrantNumber == 2:
-                collapseEdgeDirection = ["back", "right"]
-                axisEdgeDirection = ["front", "left"]
-                arcEdgeDirection = {
-                        "top-block" : [
-                                ["right", "top"],
-                                ["right", "bottom"]
-                            ],
-                        "side-block" : [
-                                ["back", "top"],
-                                ["back", "bottom"]
-                            ],
-                    }
-            if quadrantNumber == 3:
-                collapseEdgeDirection = ["back", "left"]
-                axisEdgeDirection = ["front", "right"]
-                arcEdgeDirection = {
-                        "top-block" : [
-                                ["left", "top"],
-                                ["left", "bottom"]
-                            ],
-                        "side-block" : [
-                                ["back", "top"],
-                                ["back", "bottom"]
-                            ],
-                    }
-            if quadrantNumber == 4:
-                collapseEdgeDirection = ["front", "left"]
-                axisEdgeDirection = ["back", "right"]
-                arcEdgeDirection = {
-                        "top-block" : [
-                                ["left", "top"],
-                                ["left", "bottom"]
-                            ],
-                        "side-block" : [
-                                ["front", "top"],
-                                ["front", "bottom"]
-                            ],
-                    }
-        # hl()
-        # print(f"Center block : {centerBlock.multiblock_index()}")
-        # print(f"Top block    : {topBlock.multiblock_index()}")
-        # print(f"Side block   : {sideBlock.multiblock_index()}")
-        # exit(-1)
+        
+        return sideBlock
+    
+    def get_quadrant_block_details(
+            self,
+            centerBlock,
+            slicePlane,
+            quadrantNumber,
+        ) -> dict:
+        
+        quadrantInfo = {}
+        
+        ix, iy, iz = centerBlock.multiBlockIndex
+        
+        topShift, sideShift = self.get_block_shift_coefficient_for_quadrant(quadrantNumber)
+        
+        topBlock = self.get_top_block_for_quadrant(
+                slicePlane,
+                centerBlock.multiBlockIndex,
+                topShift
+            )
+        
+        sideBlock = self.get_side_block_for_quadrant(
+                slicePlane,
+                centerBlock.multiBlockIndex,
+                sideShift
+            )
+        
+        collapseEdgeDirection = quadrantEdgeRule[slicePlane][quadrantNumber]["collapse-edge-location"]
+        axisEdgeDirection = quadrantEdgeRule[slicePlane][quadrantNumber]["axis-edge-location"]
+        arcEdgeDirection = quadrantEdgeRule[slicePlane][quadrantNumber]["arc-edge-location"]
                 
         quadrantInfo["top-block"] = topBlock
         quadrantInfo["side-block"] = sideBlock
@@ -1019,37 +905,475 @@ class MultiBlock:
         
         return quadrantInfo
     
+    def get_angles_for_quadrant(
+            self,
+            quadrantNumber
+        ) -> tuple:
+        """
+        Get the angles to define the arc points to apply curvature 
+        on the block edges of teh quadrant 
+        """
+        
+        if quadrantNumber == 1:
+            thetaCorner = 45
+            thetaSideArc = 45/2.0
+            thetaTopArc = 3*45/2.0
+            
+        elif quadrantNumber == 2:
+            thetaCorner = (1*90) + 45
+            thetaSideArc = (1*90) + (3*45/2.0)
+            thetaTopArc = (1*90) + (45/2.0)
+        
+        elif quadrantNumber == 3:
+            thetaCorner = (2*90) + 45
+            thetaSideArc = (2*90) + (45/2.0)
+            thetaTopArc = (2*90) + (3*45/2.0)
+        
+        elif quadrantNumber == 4:
+            thetaCorner = (3*90) + 45
+            thetaSideArc = (3*90) + (3*45/2.0)
+            thetaTopArc = (3*90) + (45/2.0)
+        
+        return (
+                thetaCorner,
+                thetaSideArc,
+                thetaTopArc
+            )
     
-    ### TOO LONG - NEED TO SIMPLIFY ###
+    def get_quadrant_arc_coordinates(
+            self,
+            slicePlane,
+            radius,
+            quadrantCenter,
+            thetaCorner,
+            thetaSideArc,
+            thetaTopArc,
+        ) -> tuple:
+        
+        sinThetaCorner = math.sin(math.radians(thetaCorner))
+        cosThetaCorner = math.cos(math.radians(thetaCorner))
+        
+        sinThetaSideArc = math.sin(math.radians(thetaSideArc))
+        cosThetaSideArc = math.cos(math.radians(thetaSideArc))
+        
+        sinThetaTopArc = math.sin(math.radians(thetaTopArc))
+        cosThetaTopArc = math.cos(math.radians(thetaTopArc))
+        
+        if slicePlane == "xy":
+            radialCornerX = (radius * cosThetaCorner) + quadrantCenter[0]
+            radialCornerY = (radius * sinThetaCorner) + quadrantCenter[1]
+            radialCornerZ = None
+            
+            radialTopArcX = (radius * cosThetaTopArc) + quadrantCenter[0]
+            radialTopArcY = (radius * sinThetaTopArc) + quadrantCenter[1]
+            radialTopArcZ = None
+            
+            radialSideArcX = (radius * cosThetaSideArc) + quadrantCenter[0]
+            radialSideArcY = (radius * sinThetaSideArc) + quadrantCenter[1]
+            radialSideArcZ = None
+        
+        elif slicePlane == "yz":
+            radialCornerX = None
+            radialCornerY = (radius * cosThetaCorner) + quadrantCenter[1]
+            radialCornerZ = (radius * sinThetaCorner) + quadrantCenter[2]
+            
+            radialTopArcX = None
+            radialTopArcY = (radius * cosThetaTopArc) + quadrantCenter[1]
+            radialTopArcZ = (radius * sinThetaTopArc) + quadrantCenter[2]
+            
+            radialSideArcX = None
+            radialSideArcY = (radius * cosThetaSideArc) + quadrantCenter[1]
+            radialSideArcZ = (radius * sinThetaSideArc) + quadrantCenter[2]
+        
+        elif slicePlane == "zx":
+            radialCornerX = (radius * sinThetaCorner)+ quadrantCenter[0]
+            radialCornerY = None
+            radialCornerZ = (radius * cosThetaCorner) + quadrantCenter[2]
+            
+            radialTopArcX = (radius * sinThetaTopArc) + quadrantCenter[0]
+            radialTopArcY = None
+            radialTopArcZ = (radius * cosThetaTopArc) + quadrantCenter[2]
+            
+            radialSideArcX = (radius * sinThetaSideArc) + quadrantCenter[0]
+            radialSideArcY = None
+            radialSideArcZ = (radius * cosThetaSideArc) + quadrantCenter[2]
+        
+        return(
+                radialCornerX,
+                radialCornerY,
+                radialCornerZ,
+                radialTopArcX,
+                radialTopArcY,
+                radialTopArcZ,
+                radialSideArcX,
+                radialSideArcY,
+                radialSideArcZ
+            )
+    
+    def get_quadrant_collapsed_edge_delta (
+            self,
+            slicePlane,
+            sideBlockCollapseEdge,
+            radialCornerX,
+            radialCornerY,
+            radialCornerZ,
+        ) -> tuple:
+        """
+        Get the move distance of the collapsed edge after edges have been
+        been collapsed.
+        """
+        
+        if slicePlane == "xy":
+            deltaX = radialCornerX - sideBlockCollapseEdge.start.coordinates()[0]
+            deltaY = radialCornerY - sideBlockCollapseEdge.start.coordinates()[1]
+            deltaZ = 0
+            
+        elif slicePlane == "yz":
+            deltaX = 0
+            deltaY = radialCornerY - sideBlockCollapseEdge.start.coordinates()[1]
+            deltaZ = radialCornerZ - sideBlockCollapseEdge.start.coordinates()[2]
+            
+        elif slicePlane == "zx":
+            deltaZ = radialCornerZ - sideBlockCollapseEdge.start.coordinates()[2]
+            deltaY = 0
+            deltaX = radialCornerX - sideBlockCollapseEdge.start.coordinates()[0]
+        
+        return (
+                deltaX,
+                deltaY,
+                deltaZ
+            )
+    
+    def reshape_quadrant_center_block(
+            self,
+            slicePlane,
+            radius,
+            quadrantNumber,
+            compressionFactor,
+            centerBlockInnerCorner
+        ) -> None:
+        """
+        Reshape the center block (block containing the axis of the quadrant)
+        to smooth out the quadrant mesh
+        """
+        
+        if quadrantNumber == 1:
+            shiftFactor1stAxis = -1
+            shiftFactor2ndAxis = -1
+        elif quadrantNumber == 2:
+            shiftFactor1stAxis = 1
+            shiftFactor2ndAxis = -1
+        elif quadrantNumber == 3:
+            shiftFactor1stAxis = 1
+            shiftFactor2ndAxis = 1
+        elif quadrantNumber == 4:
+            shiftFactor1stAxis = -1
+            shiftFactor2ndAxis = 1
+            
+        if slicePlane == "xy":
+            centerBlockInnerEdgeDeltaX = shiftFactor1stAxis * radius/2.0 * compressionFactor
+            centerBlockInnerEdgeDeltaY = shiftFactor2ndAxis * radius/2.0 * compressionFactor
+            centerBlockInnerEdgeDeltaZ = 0
+        elif slicePlane == "yz":
+            centerBlockInnerEdgeDeltaY = shiftFactor1stAxis * radius/2.0 * compressionFactor
+            centerBlockInnerEdgeDeltaZ = shiftFactor2ndAxis * radius/2.0 * compressionFactor
+            centerBlockInnerEdgeDeltaX = 0
+        elif slicePlane == "zx":
+            centerBlockInnerEdgeDeltaZ = shiftFactor1stAxis * radius/2.0 * compressionFactor
+            centerBlockInnerEdgeDeltaX = shiftFactor2ndAxis * radius/2.0 * compressionFactor
+            centerBlockInnerEdgeDeltaY = 0
+        
+        centerBlockInnerCorner.move([
+                centerBlockInnerEdgeDeltaX,
+                centerBlockInnerEdgeDeltaY,
+                centerBlockInnerEdgeDeltaZ
+            ])
+            
+    def add_quadrant_arc_top_block(
+            self,
+            slicePlane,
+            topBlock,
+            arcEdgeDirection,
+            radialTopArcX,
+            radialTopArcY,
+            radialTopArcZ
+        ) -> list:
+        """
+        Implement the arc on the edges of a top block of the quadrant
+
+        Args:
+            slicePlane (str): Name of the slice plane
+            topBlock (Block): A Block object which lies on top of the center block
+            arcEdgeDirection (list): A list describing the position of an edge in a block
+            radialTopArcX (float): X coordinate of the arch at the edges of the top block
+            radialTopArcY (float): Y coordinate of the arch at the edges of the top block
+            radialTopArcZ (float): Z coordinate of the arch at the edges of the top block
+
+        Returns:
+            list: List of strings containing the blockMeshDict entry
+        """
+        
+        edgeDefinitionTopBlock = []
+        
+        arcEdgeTopBlock1 = topBlock.find_edge(
+                arcEdgeDirection["top-block"][0]
+            )
+        arcEdgeTopBlock2 = topBlock.find_edge(
+                arcEdgeDirection["top-block"][1]
+            )
+        
+        if slicePlane == "xy":
+            radialTopArcZ1 = arcEdgeTopBlock1.start.coordinates()[2]
+            radialTopArcZ2 = arcEdgeTopBlock2.start.coordinates()[2]
+        
+            edgeDefinitionTopBlock.append(
+                arcEdgeTopBlock1.arc(
+                        (
+                            radialTopArcX,
+                            radialTopArcY,
+                            radialTopArcZ1
+                        )
+                    )
+                )
+            edgeDefinitionTopBlock.append(
+                arcEdgeTopBlock2.arc(
+                        (
+                            radialTopArcX,
+                            radialTopArcY,
+                            radialTopArcZ2
+                        )
+                    )
+                )
+            
+        elif slicePlane == "yz":
+            radialTopArcX1 = arcEdgeTopBlock1.start.coordinates()[0]
+            radialTopArcX2 = arcEdgeTopBlock2.start.coordinates()[0]
+        
+            edgeDefinitionTopBlock.append(
+                arcEdgeTopBlock1.arc(
+                        (
+                            radialTopArcX1,
+                            radialTopArcY,
+                            radialTopArcZ
+                        )
+                    )
+                )
+            edgeDefinitionTopBlock.append(
+                arcEdgeTopBlock2.arc(
+                        (
+                            radialTopArcX2,
+                            radialTopArcY,
+                            radialTopArcZ
+                        )
+                    )
+                )
+        elif slicePlane == "zx":
+            radialTopArcY1 = arcEdgeTopBlock1.start.coordinates()[1]
+            radialTopArcY2 = arcEdgeTopBlock2.start.coordinates()[1]
+        
+            edgeDefinitionTopBlock.append(
+                arcEdgeTopBlock1.arc(
+                        (
+                            radialTopArcX,
+                            radialTopArcY1,
+                            radialTopArcZ
+                        )
+                    )
+                )
+            edgeDefinitionTopBlock.append(
+                arcEdgeTopBlock2.arc(
+                        (
+                            radialTopArcX,
+                            radialTopArcY2,
+                            radialTopArcZ
+                        )
+                    )
+                )
+        
+        return edgeDefinitionTopBlock
+            
+    def add_quadrant_arc_side_block(
+            self,
+            slicePlane,
+            sideBlock,
+            arcEdgeDirection,
+            radialSideArcX,
+            radialSideArcY,
+            radialSideArcZ
+        ) -> list:
+        """
+        Implement the arc on the edges of a side block of the quadrant
+
+        Args:
+            slicePlane (str): Name of the slice plane
+            sideBlock (Block): A Block object which lies on side of the center block
+            arcEdgeDirection (list): A list describing the position of an edge in a block
+            radialSideArcX (float): X coordinate of the arch at the edges of the side block
+            radialSideArcY (float): Y coordinate of the arch at the edges of the side block
+            radialSideArcZ (float): Z coordinate of the arch at the edges of the side block
+
+        Returns:
+            list: List of strings containing the blockMeshDict entry
+        """
+        
+        edgeDefinitionSideBlock = []
+        
+        arcEdgeSideBlock1 = sideBlock.find_edge(
+                arcEdgeDirection["side-block"][0]
+            )
+        arcEdgeSideBlock2 = sideBlock.find_edge(
+                arcEdgeDirection["side-block"][1]
+            )
+        
+        if slicePlane == "xy":
+            radialSideArcZ1 = arcEdgeSideBlock1.start.coordinates()[2]
+            radialSideArcZ2 = arcEdgeSideBlock2.start.coordinates()[2]
+            
+            edgeDefinitionSideBlock.append(
+                    arcEdgeSideBlock1.arc(
+                        (
+                            radialSideArcX,
+                            radialSideArcY,
+                            radialSideArcZ1
+                        )
+                    )
+                )
+            edgeDefinitionSideBlock.append(
+                    arcEdgeSideBlock2.arc(
+                        (
+                            radialSideArcX,
+                            radialSideArcY,
+                            radialSideArcZ2
+                        )
+                    )
+                )
+            
+        elif slicePlane == "yz":
+            radialSideArcX1 = arcEdgeSideBlock1.start.coordinates()[0]
+            radialSideArcX2 = arcEdgeSideBlock2.start.coordinates()[0]
+            
+            edgeDefinitionSideBlock.append(
+                    arcEdgeSideBlock1.arc(
+                        (
+                            radialSideArcX1,
+                            radialSideArcY,
+                            radialSideArcZ
+                        )
+                    )
+                )
+            edgeDefinitionSideBlock.append(
+                    arcEdgeSideBlock2.arc(
+                        (
+                            radialSideArcX2,
+                            radialSideArcY,
+                            radialSideArcZ
+                        )
+                    )
+                )
+            
+        elif slicePlane == "zx":
+            radialSideArcY1 = arcEdgeSideBlock1.start.coordinates()[1]
+            radialSideArcY2 = arcEdgeSideBlock2.start.coordinates()[1]
+            
+            edgeDefinitionSideBlock.append(
+                    arcEdgeSideBlock1.arc(
+                        (
+                            radialSideArcX,
+                            radialSideArcY1,
+                            radialSideArcZ
+                        )
+                    )
+                )
+            edgeDefinitionSideBlock.append(
+                    arcEdgeSideBlock2.arc(
+                        (
+                            radialSideArcX,
+                            radialSideArcY2,
+                            radialSideArcZ
+                        )
+                    )
+                )
+        
+        return edgeDefinitionSideBlock
+        
+    
+    def check_block_condition_for_making_disc(
+            self,
+            slicePlane,
+            startingBlock,
+            endBlock,
+        ) -> bool:
+        """
+        Check the block selections if a disc can be created
+
+        Args:
+            slicePlane (str): Name of the slice plane
+            startingBlock (Block): Selected starting block (diagonally left-bottom) 
+            endBlock (Block): Selected end block (diagonally top-right) 
+
+        Returns:
+            bool: True/false if the black selections were valid
+        """
+        
+        axisIndex1 = slicePlaneAxisIndex[slicePlane]["index1"]
+        axisIndex2 = slicePlaneAxisIndex[slicePlane]["index2"]
+        
+        blockCheckCondition1 = (startingBlock.multiBlockIndex[axisIndex1]
+                                < endBlock.multiBlockIndex[axisIndex1])
+        
+        blockCheckCondition2 = (startingBlock.multiBlockIndex[axisIndex2]
+                                < endBlock.multiBlockIndex[axisIndex2])
+        
+        if blockCheckCondition1 and blockCheckCondition2:
+            return True
+        else:
+            return False
     
     def make_quadrant(
             self,
-            viewFace: str,
             startblockId: int,
             endblockId: int,
             radius: float,
             slicePlane: str,
-            sliceIndex : int
+            blockConditionCheckNeeded: bool = True
         ) -> list:
-        """  """
+        """
+        Make quadrant based on the block selection
+
+        Args:
+            startblockId (int): Id of selected starting block (diagonally left-bottom) 
+            endblockId (int): Id of selected end block (diagonally left-bottom) 
+            radius (float): Radius of the quadrant
+            slicePlane (str): Name of the slice plane
+            blockConditionCheckNeeded (bool, optional): True means block selection validity is needed. Defaults to True.
+
+        Raises:
+            ValueError: If the block selections were invalid for making a quadrant
+            ValueError: If common edge among the center and side blocks can't be identified
+
+        Returns:
+            list: List of edge definitions to implement the quadrant shape
+        """
         
         edgeDefinitionToSend = []
         
         centerBlock = self.blocks[startblockId]
         cornerBlock = self.blocks[endblockId]
         
-        if slicePlane == "xy":
-            axisIndex1 = 0    ### x-axis
-            axisIndex2 = 1    ### y-axis
-        elif slicePlane == "yz":
-            axisIndex1 = 1    ### y-axis
-            axisIndex2 = 2    ### z-axis
-        elif slicePlane == "zx":
-            axisIndex1 = 2    ### z-axis
-            axisIndex2 = 0    ### x-axis
-            
-        # axisIndex1 = self.get_axis_index(slicePlane[0])
-        # axisIndex2 = self.get_axis_index(slicePlane[1])
+        axisIndex1 = slicePlaneAxisIndex[slicePlane]["index1"]
+        axisIndex2 = slicePlaneAxisIndex[slicePlane]["index2"]
+        
+        if blockConditionCheckNeeded:
+            isBlockConditionValid = self.check_block_condition_for_making_disc(
+                    slicePlane,
+                    centerBlock,
+                    cornerBlock,
+                )
+        else:
+            isBlockConditionValid = True
+        
+        if not isBlockConditionValid:
+            raise ValueError("Invalid block selection.\nCheck block selection for making circular section.")
         
         quadrantNumber = self.get_quadrant_number(
                 centerBlock.multiBlockIndex[axisIndex1],
@@ -1058,40 +1382,7 @@ class MultiBlock:
                 cornerBlock.multiBlockIndex[axisIndex2],
             )
         
-        # hl()
-        # print(f"Center block - ID  : {startblockId}")
-        # print(f"Corner block - ID  : {endblockId}")
-        # print(f"Center block       : {centerBlock}")
-        # print(f"Corner block       : {cornerBlock}")
-        # print(f"Axis index 1       : {axisIndex1}")
-        # print(f"Axis index 2       : {axisIndex2}")
-        # print(f"Slice plane        : {slicePlane}")
-        # hl()
-        # print(f"Center block index : {centerBlock.multiblock_index()}")
-        # print(f"Corner block index : {cornerBlock.multiblock_index()}")
-        # hl()
-        # print(f"Center block - index 1 : {centerBlock.multiblock_index()[axisIndex1]}")
-        # print(f"Center block - index 2 : {centerBlock.multiblock_index()[axisIndex2]}")
-        # print(f"Corner block - index 1 : {cornerBlock.multiblock_index()[axisIndex1]}")
-        # print(f"Corner block - index 2 : {cornerBlock.multiblock_index()[axisIndex2]}")
-        # hl()
-        # print(f"Quadrant number    : {quadrantNumber}")
-        # exit(-1)
-        
-        # quadrantInfo = self.get_quadrant_block_details(
-        #         centerBlock,
-        #         # cornerBlock,
-        #         slicePlane,
-        #         # sliceIndex,
-        #         quadrantNumber,
-        #     )
-        
-        # topBlock = quadrantInfo["top-block"]
-        # sideBlock = quadrantInfo["side-block"]
-        # collapseEdge = quadrantInfo["collapse-edge"]
-        # axisEdge = quadrantInfo["axis-edge"]
-        # arcEdge = quadrantInfo["arc-edge"]
-        
+        ### Get necessary information to create the quadrant
         (
             topBlock,
             sideBlock,
@@ -1117,88 +1408,44 @@ class MultiBlock:
             )
         
         ### Calculating "Delta" for the collapsed edges
-        if quadrantNumber == 1:
-            thetaCorner = 45
-            thetaSideArc = 45/2.0
-            thetaTopArc = 3*45/2.0
-            
-        elif quadrantNumber == 2:
-            thetaCorner = (1*90) + 45
-            thetaSideArc = (1*90) + (3*45/2.0)
-            thetaTopArc = (1*90) + (45/2.0)
-        
-        elif quadrantNumber == 3:
-            thetaCorner = (2*90) + 45
-            thetaSideArc = (2*90) + (45/2.0)
-            thetaTopArc = (2*90) + (3*45/2.0)
-        
-        elif quadrantNumber == 4:
-            thetaCorner = (3*90) + 45
-            thetaSideArc = (3*90) + (3*45/2.0)
-            thetaTopArc = (3*90) + (45/2.0)
-        
-        sinThetaCorner = math.sin(math.radians(thetaCorner))
-        cosThetaCorner = math.cos(math.radians(thetaCorner))
-        
-        sinThetaSideArc = math.sin(math.radians(thetaSideArc))
-        cosThetaSideArc = math.cos(math.radians(thetaSideArc))
-        
-        sinThetaTopArc = math.sin(math.radians(thetaTopArc))
-        cosThetaTopArc = math.cos(math.radians(thetaTopArc))
+        (
+            thetaCorner,
+            thetaSideArc,
+            thetaTopArc
+        ) = self.get_angles_for_quadrant(quadrantNumber)
         
         quadrantCenter = centerBlockAxisEdge.start.coordinates()
         
-        if slicePlane == "xy":
-            radialCornerX = (radius * cosThetaCorner) + quadrantCenter[0]
-            radialCornerY = (radius * sinThetaCorner) + quadrantCenter[1]
-            
-            deltaX = radialCornerX - sideBlockCollapseEdge.start.coordinates()[0]
-            deltaY = radialCornerY - sideBlockCollapseEdge.start.coordinates()[1]
-            deltaZ = 0
-            
-            radialTopArcX = (radius * cosThetaTopArc) + quadrantCenter[0]
-            radialTopArcY = (radius * sinThetaTopArc) + quadrantCenter[1]
-            
-            radialSideArcX = (radius * cosThetaSideArc) + quadrantCenter[0]
-            radialSideArcY = (radius * sinThetaSideArc) + quadrantCenter[1]
+        (
+            radialCornerX,
+            radialCornerY,
+            radialCornerZ,
+            radialTopArcX,
+            radialTopArcY,
+            radialTopArcZ,
+            radialSideArcX,
+            radialSideArcY,
+            radialSideArcZ
+        ) = self.get_quadrant_arc_coordinates(
+                slicePlane,
+                radius,
+                quadrantCenter,
+                thetaCorner,
+                thetaSideArc,
+                thetaTopArc,
+            )
         
-        elif slicePlane == "yz":
-            radialCornerY = (radius * cosThetaCorner) + quadrantCenter[1]
-            radialCornerZ = (radius * sinThetaCorner) + quadrantCenter[2]
-            
-            deltaX = 0
-            deltaY = radialCornerY - sideBlockCollapseEdge.start.coordinates()[1]
-            deltaZ = radialCornerZ - sideBlockCollapseEdge.start.coordinates()[2]
-            
-            radialTopArcY = (radius * cosThetaTopArc) + quadrantCenter[1]
-            radialTopArcZ = (radius * sinThetaTopArc) + quadrantCenter[2]
-            
-            radialSideArcY = (radius * cosThetaSideArc) + quadrantCenter[1]
-            radialSideArcZ = (radius * sinThetaSideArc) + quadrantCenter[2]
-        
-        elif slicePlane == "zx":
-            radialCornerZ = (radius * cosThetaCorner) + quadrantCenter[2]
-            radialCornerX = (radius * sinThetaCorner)+ quadrantCenter[0]
-            
-            deltaZ = radialCornerZ - sideBlockCollapseEdge.start.coordinates()[2]
-            deltaY = 0
-            deltaX = radialCornerX - sideBlockCollapseEdge.start.coordinates()[0]
-            
-            radialTopArcZ = (radius * cosThetaTopArc) + quadrantCenter[2]
-            radialTopArcX = (radius * sinThetaTopArc) + quadrantCenter[0]
-            
-            radialSideArcZ = (radius * cosThetaSideArc) + quadrantCenter[2]
-            radialSideArcX = (radius * sinThetaSideArc) + quadrantCenter[0]
-        
-        
-        # hl()
-        # print(f"Quadrant center  : {quadrantCenter}")
-        # print(f"Corner angle     : {thetaCorner}")
-        # print(f"Delta X, Delta Y : {deltaX}, {deltaY}")
-        # print(f"Radian corner, X : {radialCornerX}")
-        # print(f"Radian corner, Y : {radialCornerY}")
-        # print(f"cos theta : {cosThetaCorner}")
-        # exit(-1)
+        (
+            deltaX,
+            deltaY,
+            deltaZ
+        ) = self.get_quadrant_collapsed_edge_delta(
+                slicePlane,
+                sideBlockCollapseEdge,
+                radialCornerX,
+                radialCornerY,
+                radialCornerZ,
+            )
         
         ### Move-Collapse for Quadrant
         topBlockCollapseEdge.move_collapse(
@@ -1217,208 +1464,450 @@ class MultiBlock:
         else:
             centerBlockInnerCorner = commonEdge[0]
         
-        # # hl()
-        # # print(f"Common edge : {commonEdge}")
-        # # exit(-1)
-        
-        if quadrantNumber == 1:
-            shiftFactor1stAxis = -1
-            shiftFactor2ndAxis = -1
-        elif quadrantNumber == 2:
-            shiftFactor1stAxis = 1
-            shiftFactor2ndAxis = -1
-        elif quadrantNumber == 3:
-            shiftFactor1stAxis = 1
-            shiftFactor2ndAxis = 1
-        elif quadrantNumber == 4:
-            shiftFactor1stAxis = -1
-            shiftFactor2ndAxis = 1
-        
         compressionFactor = 0.20
         
-        if slicePlane == "xy":
-            deltaX = shiftFactor1stAxis * radius/2.0 * compressionFactor
-            deltaY = shiftFactor2ndAxis * radius/2.0 * compressionFactor
-            deltaZ = 0
-        elif slicePlane == "yz":
-            deltaY = shiftFactor1stAxis * radius * compressionFactor
-            deltaZ = shiftFactor2ndAxis * radius * compressionFactor
-            deltaX = 0
-        elif slicePlane == "zx":
-            deltaZ = shiftFactor1stAxis * radius * compressionFactor
-            deltaX = shiftFactor2ndAxis * radius * compressionFactor
-            deltaY = 0
-        
-        centerBlockInnerCorner.move([deltaX, deltaY, deltaZ])
-        
-        
+        self.reshape_quadrant_center_block(
+                slicePlane,
+                radius,
+                quadrantNumber,
+                compressionFactor,
+                centerBlockInnerCorner
+            )
         
         ### Adding arc to the edges
         
         ### Top Block
-        arcEdgeTopBlock1 = topBlock.find_edge(
-                arcEdgeDirection["top-block"][0]
+        edgeDefinitionToSend.extend(
+                self.add_quadrant_arc_top_block(
+                    slicePlane,
+                    topBlock,
+                    arcEdgeDirection,
+                    radialTopArcX,
+                    radialTopArcY,
+                    radialTopArcZ
+                )
             )
-        arcEdgeTopBlock2 = topBlock.find_edge(
-                arcEdgeDirection["top-block"][1]
-            )
-        
-        if slicePlane == "xy":
-            radialTopArcZ1 = arcEdgeTopBlock1.start.coordinates()[2]
-            radialTopArcZ2 = arcEdgeTopBlock2.start.coordinates()[2]
-        
-            edgeDefinitionToSend.append(
-                arcEdgeTopBlock1.arc(
-                        (
-                            radialTopArcX,
-                            radialTopArcY,
-                            radialTopArcZ1
-                        )
-                    )
-                )
-            edgeDefinitionToSend.append(
-                arcEdgeTopBlock2.arc(
-                        (
-                            radialTopArcX,
-                            radialTopArcY,
-                            radialTopArcZ2
-                        )
-                    )
-                )
-            
-        elif slicePlane == "yz":
-            radialTopArcX1 = arcEdgeTopBlock1.start.coordinates()[0]
-            radialTopArcX2 = arcEdgeTopBlock2.start.coordinates()[0]
-        
-            edgeDefinitionToSend.append(
-                arcEdgeTopBlock1.arc(
-                        (
-                            radialTopArcX1,
-                            radialTopArcY,
-                            radialTopArcZ
-                        )
-                    )
-                )
-            edgeDefinitionToSend.append(
-                arcEdgeTopBlock2.arc(
-                        (
-                            radialTopArcX2,
-                            radialTopArcY,
-                            radialTopArcZ
-                        )
-                    )
-                )
-        elif slicePlane == "zx":
-            radialTopArcY1 = arcEdgeTopBlock1.start.coordinates()[1]
-            radialTopArcY2 = arcEdgeTopBlock2.start.coordinates()[1]
-        
-            edgeDefinitionToSend.append(
-                arcEdgeTopBlock1.arc(
-                        (
-                            radialTopArcX,
-                            radialTopArcY1,
-                            radialTopArcZ
-                        )
-                    )
-                )
-            edgeDefinitionToSend.append(
-                arcEdgeTopBlock2.arc(
-                        (
-                            radialTopArcX,
-                            radialTopArcY2,
-                            radialTopArcZ
-                        )
-                    )
-                )
         
         ### Side Block
-        arcEdgeSideBlock1 = sideBlock.find_edge(
-                arcEdgeDirection["side-block"][0]
+        edgeDefinitionToSend.extend(
+                self.add_quadrant_arc_side_block(
+                    slicePlane,
+                    sideBlock,
+                    arcEdgeDirection,
+                    radialSideArcX,
+                    radialSideArcY,
+                    radialSideArcZ
+                )
             )
-        arcEdgeSideBlock2 = sideBlock.find_edge(
-                arcEdgeDirection["side-block"][1]
-            )
-        
-        if slicePlane == "xy":
-            radialSideArcZ1 = arcEdgeSideBlock1.start.coordinates()[2]
-            radialSideArcZ2 = arcEdgeSideBlock2.start.coordinates()[2]
-            
-            edgeDefinitionToSend.append(
-                    arcEdgeSideBlock1.arc(
-                        (
-                            radialSideArcX,
-                            radialSideArcY,
-                            radialSideArcZ1
-                        )
-                    )
-                )
-            edgeDefinitionToSend.append(
-                    arcEdgeSideBlock2.arc(
-                        (
-                            radialSideArcX,
-                            radialSideArcY,
-                            radialSideArcZ2
-                        )
-                    )
-                )
-            
-        elif slicePlane == "yz":
-            radialSideArcX1 = arcEdgeSideBlock1.start.coordinates()[0]
-            radialSideArcX2 = arcEdgeSideBlock2.start.coordinates()[0]
-            
-            edgeDefinitionToSend.append(
-                    arcEdgeSideBlock1.arc(
-                        (
-                            radialSideArcX1,
-                            radialSideArcY,
-                            radialSideArcZ
-                        )
-                    )
-                )
-            edgeDefinitionToSend.append(
-                    arcEdgeSideBlock2.arc(
-                        (
-                            radialSideArcX2,
-                            radialSideArcY,
-                            radialSideArcZ
-                        )
-                    )
-                )
-            
-        elif slicePlane == "zx":
-            radialSideArcY1 = arcEdgeSideBlock1.start.coordinates()[1]
-            radialSideArcY2 = arcEdgeSideBlock2.start.coordinates()[1]
-            
-            edgeDefinitionToSend.append(
-                    arcEdgeSideBlock1.arc(
-                        (
-                            radialSideArcX,
-                            radialSideArcY1,
-                            radialSideArcZ
-                        )
-                    )
-                )
-            edgeDefinitionToSend.append(
-                    arcEdgeSideBlock2.arc(
-                        (
-                            radialSideArcX,
-                            radialSideArcY2,
-                            radialSideArcZ
-                        )
-                    )
-                )
         
         return edgeDefinitionToSend
     
-    def make_semicircle(self) -> None:
-        """  """
+    def make_semicircle(
+            self,
+            startblockId: int,
+            endblockId: int,
+            radius: float,
+            slicePlane: str,
+        ) -> list:
+        """
+        Make semicircle based on the block selection
+
+        Args:
+            startblockId (int): Id of selected starting block (diagonally left-bottom)
+            endblockId (int): Id of selected end block (diagonally left-bottom) 
+            radius (float): Radius of the quadrant
+            slicePlane (str): Name of the slice plane
+
+        Raises:
+            ValueError: If the block selections were invalid for making a quadrant
+
+        Returns:
+            list: List of edge definitions to implement the quadrant shape
+        """
         
-        pass
+        nQuadrant = 2
+        
+        edgeDefinitionToSend = []
+        
+        startingBlock = self.blocks[startblockId]
+        endBlock = self.blocks[endblockId]
+        
+        startingBlockIndex = startingBlock.multiBlockIndex
+        
+        isBlockConditionValid = self.check_block_condition_for_making_disc(
+                slicePlane,
+                startingBlock,
+                endBlock,
+            )
+        
+        if not isBlockConditionValid:
+            raise ValueError("Invalid block selection.\nCheck block selection for making circular section.")
+        else:
+            blockConditionCheckNeeded = False
+        
+        centerBlock = []
+        cornerBlock = []
+        
+        
+        ### Quadrant - 1
+        #---------------------------------------
+        cornerBlock.append(endBlock)
+        
+        if slicePlane == "xy":
+            centerBlock.append(
+                    self.get_block_with_multiblock_index(
+                            (
+                                startingBlockIndex[0] + 2,
+                                startingBlockIndex[1],
+                                startingBlockIndex[2]
+                            )
+                        )
+                )
+        elif slicePlane == "yz":
+            centerBlock.append(
+                    self.get_block_with_multiblock_index(
+                            (
+                                startingBlockIndex[0],
+                                startingBlockIndex[1] + 2,
+                                startingBlockIndex[2]
+                            )
+                        )
+                )
+        elif slicePlane == "zx":
+            centerBlock.append(
+                    self.get_block_with_multiblock_index(
+                            (
+                                startingBlockIndex[0],
+                                startingBlockIndex[1],
+                                startingBlockIndex[2] + 2
+                            )
+                        )
+                )
+        
+        
+        ### Quadrant - 2
+        #---------------------------------------
+        if slicePlane == "xy":
+            centerBlock.append(
+                    self.get_block_with_multiblock_index(
+                            (
+                                startingBlockIndex[0] + 1,
+                                startingBlockIndex[1],
+                                startingBlockIndex[2]
+                            )
+                        )
+                )
+            cornerBlock.append(
+                    self.get_block_with_multiblock_index(
+                            (
+                                startingBlockIndex[0],
+                                startingBlockIndex[1] + 1,
+                                startingBlockIndex[2]
+                            )
+                        )
+                )
+        elif slicePlane == "yz":
+            centerBlock.append(
+                    self.get_block_with_multiblock_index(
+                            (
+                                startingBlockIndex[0],
+                                startingBlockIndex[1] + 1,
+                                startingBlockIndex[2]
+                            )
+                        )
+                )
+            cornerBlock.append(
+                    self.get_block_with_multiblock_index(
+                            (
+                                startingBlockIndex[0],
+                                startingBlockIndex[1],
+                                startingBlockIndex[2] + 1
+                            )
+                        )
+                )
+        elif slicePlane == "zx":
+            centerBlock.append(
+                    self.get_block_with_multiblock_index(
+                            (
+                                startingBlockIndex[0],
+                                startingBlockIndex[1],
+                                startingBlockIndex[2] + 1
+                            )
+                        )
+                )
+            cornerBlock.append(
+                    self.get_block_with_multiblock_index(
+                            (
+                                startingBlockIndex[0] + 1,
+                                startingBlockIndex[1],
+                                startingBlockIndex[2]
+                            )
+                        )
+                )
+        for i in range(nQuadrant):
+            edgeDefinitionToSend.extend(
+                self.make_quadrant(
+                    centerBlock[i].id,
+                    cornerBlock[i].id,
+                    radius,
+                    slicePlane,
+                    blockConditionCheckNeeded
+                )
+            )
+        return edgeDefinitionToSend
     
-    def make_circle(self) -> None:
-        """  """
+    def make_circle(
+            self,
+            startblockId: int,
+            endblockId: int,
+            radius: float,
+            slicePlane: str,
+        ) -> list:
+        """
+        Make circle based on the block selection
+
+        Args:
+            startblockId (int): Id of selected starting block (diagonally left-bottom)
+            endblockId (int): Id of selected end block (diagonally left-bottom) 
+            radius (float): Radius of the quadrant
+            slicePlane (str): Name of the slice plane
+
+        Raises:
+            ValueError: If the block selections were invalid for making a quadrant
+
+        Returns:
+            list: List of edge definitions to implement the quadrant shape
+        """
         
-        pass
+        nQuadrant = 4
+        
+        edgeDefinitionToSend = []
+        
+        startingBlock = self.blocks[startblockId]
+        endBlock = self.blocks[endblockId]
+        
+        startingBlockIndex = startingBlock.multiBlockIndex
+        
+        isBlockConditionValid = self.check_block_condition_for_making_disc(
+                slicePlane,
+                startingBlock,
+                endBlock,
+            )
+        
+        if not isBlockConditionValid:
+            raise ValueError("Invalid block selection.\nCheck block selection for making circular section.")
+        else:
+            blockConditionCheckNeeded = False
+        
+        centerBlock = []
+        cornerBlock = []
+        
+        
+        ### Quadrant - 1
+        #---------------------------------------
+        cornerBlock.append(endBlock)
+        
+        if slicePlane == "xy":
+            centerBlock.append(
+                    self.get_block_with_multiblock_index(
+                            (
+                                startingBlockIndex[0] + 2,
+                                startingBlockIndex[1] + 2,
+                                startingBlockIndex[2]
+                            )
+                        )
+                )
+        elif slicePlane == "yz":
+            centerBlock.append(
+                    self.get_block_with_multiblock_index(
+                            (
+                                startingBlockIndex[0],
+                                startingBlockIndex[1] + 2,
+                                startingBlockIndex[2] + 2
+                            )
+                        )
+                )
+        elif slicePlane == "zx":
+            centerBlock.append(
+                    self.get_block_with_multiblock_index(
+                            (
+                                startingBlockIndex[0] + 2,
+                                startingBlockIndex[1],
+                                startingBlockIndex[2] + 2
+                            )
+                        )
+                )
+        
+        
+        ### Quadrant - 2
+        #---------------------------------------
+        if slicePlane == "xy":
+            centerBlock.append(
+                    self.get_block_with_multiblock_index(
+                            (
+                                startingBlockIndex[0] + 1,
+                                startingBlockIndex[1] + 2,
+                                startingBlockIndex[2]
+                            )
+                        )
+                )
+            cornerBlock.append(
+                    self.get_block_with_multiblock_index(
+                            (
+                                startingBlockIndex[0],
+                                startingBlockIndex[1] + 3,
+                                startingBlockIndex[2]
+                            )
+                        )
+                )
+        elif slicePlane == "yz":
+            centerBlock.append(
+                    self.get_block_with_multiblock_index(
+                            (
+                                startingBlockIndex[0],
+                                startingBlockIndex[1] + 1,
+                                startingBlockIndex[2] + 2
+                            )
+                        )
+                )
+            cornerBlock.append(
+                    self.get_block_with_multiblock_index(
+                            (
+                                startingBlockIndex[0],
+                                startingBlockIndex[1],
+                                startingBlockIndex[2] + 3
+                            )
+                        )
+                )
+        elif slicePlane == "zx":
+            centerBlock.append(
+                    self.get_block_with_multiblock_index(
+                            (
+                                startingBlockIndex[0] + 2,
+                                startingBlockIndex[1],
+                                startingBlockIndex[2] + 1
+                            )
+                        )
+                )
+            cornerBlock.append(
+                    self.get_block_with_multiblock_index(
+                            (
+                                startingBlockIndex[0] + 3,
+                                startingBlockIndex[1],
+                                startingBlockIndex[2]
+                            )
+                        )
+                )
+        
+        
+        ### Quadrant - 3
+        #---------------------------------------
+        cornerBlock.append(startingBlock)
+        
+        if slicePlane == "xy":
+            centerBlock.append(
+                    self.get_block_with_multiblock_index(
+                            (
+                                startingBlockIndex[0] + 1,
+                                startingBlockIndex[1] + 1,
+                                startingBlockIndex[2]
+                            )
+                        )
+                )
+        elif slicePlane == "yz":
+            centerBlock.append(
+                    self.get_block_with_multiblock_index(
+                            (
+                                startingBlockIndex[0],
+                                startingBlockIndex[1] + 1,
+                                startingBlockIndex[2] + 1
+                            )
+                        )
+                )
+        elif slicePlane == "zx":
+            centerBlock.append(
+                    self.get_block_with_multiblock_index(
+                            (
+                                startingBlockIndex[0] + 1,
+                                startingBlockIndex[1],
+                                startingBlockIndex[2] + 1
+                            )
+                        )
+                )
+        
+        
+        ### Quadrant - 4
+        #---------------------------------------
+        if slicePlane == "xy":
+            centerBlock.append(
+                    self.get_block_with_multiblock_index(
+                            (
+                                startingBlockIndex[0] + 2,
+                                startingBlockIndex[1] + 1,
+                                startingBlockIndex[2]
+                            )
+                        )
+                )
+            cornerBlock.append(
+                    self.get_block_with_multiblock_index(
+                            (
+                                startingBlockIndex[0] + 3,
+                                startingBlockIndex[1],
+                                startingBlockIndex[2]
+                            )
+                        )
+                )
+        elif slicePlane == "yz":
+            centerBlock.append(
+                    self.get_block_with_multiblock_index(
+                            (
+                                startingBlockIndex[0],
+                                startingBlockIndex[1] + 2,
+                                startingBlockIndex[2] + 1
+                            )
+                        )
+                )
+            cornerBlock.append(
+                    self.get_block_with_multiblock_index(
+                            (
+                                startingBlockIndex[0],
+                                startingBlockIndex[1] + 3,
+                                startingBlockIndex[2]
+                            )
+                        )
+                )
+        elif slicePlane == "zx":
+            centerBlock.append(
+                    self.get_block_with_multiblock_index(
+                            (
+                                startingBlockIndex[0] + 1,
+                                startingBlockIndex[1],
+                                startingBlockIndex[2] + 2
+                            )
+                        )
+                )
+            cornerBlock.append(
+                    self.get_block_with_multiblock_index(
+                            (
+                                startingBlockIndex[0],
+                                startingBlockIndex[1],
+                                startingBlockIndex[2] + 3
+                            )
+                        )
+                )
+        
+        for i in range(nQuadrant):
+            edgeDefinitionToSend.extend(
+                self.make_quadrant(
+                    centerBlock[i].id,
+                    cornerBlock[i].id,
+                    radius,
+                    slicePlane,
+                    blockConditionCheckNeeded
+                )
+            )
+        
+        return edgeDefinitionToSend
         
             
 

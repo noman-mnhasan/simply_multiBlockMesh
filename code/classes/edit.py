@@ -62,6 +62,7 @@ class Edit:
         
         if not isinstance(value, str):
             raise ValueError("Edit input filename must be a string.")
+        
         self._filename = value
     
     @property
@@ -70,7 +71,10 @@ class Edit:
     
     @fileExist.setter
     def fileExist(self, value: bool) -> None:
-        """  """
+        """ Check, raise error and assign value of Edit.fileExist """
+        
+        if not isinstance(value, bool):
+            raise ValueError("Edit.fileExist must be a bool.")
         
         self._fileExist = value
     
@@ -79,9 +83,7 @@ class Edit:
         return self._task
     
     @task.setter
-    def task(self, value: types.ModuleType) -> None:
-        """  """
-                
+    def task(self, value: types.ModuleType) -> None:                
         self._task = value
     
     @property
@@ -89,9 +91,7 @@ class Edit:
         return self._edgeDefinition
     
     @edgeDefinition.setter
-    def edgeDefinition(self, value: list) -> None:
-        """  """
-        
+    def edgeDefinition(self, value: list) -> None:        
         self._edgeDefinition = value
     
     @property
@@ -99,9 +99,7 @@ class Edit:
         return self._boundaryDefinition
     
     @boundaryDefinition.setter
-    def boundaryDefinition(self, value: list) -> None:
-        """  """
-        
+    def boundaryDefinition(self, value: list) -> None:        
         self._boundaryDefinition = value
     
     
@@ -188,11 +186,11 @@ class Edit:
         for taskId, task in self.task.edgeEdit.items():
             
             ### Identify edge
-            edge = task["block-id"].find_edge(
+            edge = blocks[task["block-id"]].find_edge(
                     task["edge-position"]
                 )
             if "target-edge" in task.keys():
-                targetEdge = task["block-id"].find_edge(
+                targetEdge = blocks[task["target-edge"]["block-id"]].find_edge(
                         task["target-edge"]["edge-position"]
                     )
             
@@ -228,13 +226,12 @@ class Edit:
                 self.edgeDefinition.append(
                         edge.spline(task["polyline-points"])
                     )
-        
-    
     
     def execute_block_operation(
             self,
             mb: MultiBlock
         ) -> None:
+        
         
         for taskId, task in self.task.blockEdit.items():
             
@@ -244,16 +241,47 @@ class Edit:
                         mb.blocks[task["starting-block-id"]],
                         mb.blocks[task["ending-block-id"]]
                     )
+                
                 self.edgeDefinition.extend(
                     mb.make_quadrant(
-                            task["block-face"],
                             task["starting-block-id"],
                             task["ending-block-id"],
                             task["radius"],
                             slicePlane,
-                            sliceIndex
                         )
                     )
+            
+            ### Making semicircle
+            if task["edit-type"].lower() == "make-semicircle":
+                slicePlane, sliceIndex = self.get_slice_info_from_block_pair(
+                        mb.blocks[task["starting-block-id"]],
+                        mb.blocks[task["ending-block-id"]]
+                    )
+                
+                self.edgeDefinition.extend(
+                    mb.make_semicircle(
+                            task["starting-block-id"],
+                            task["ending-block-id"],
+                            task["radius"],
+                            slicePlane,
+                        )
+                    )
+            
+            ### Making circle
+            if task["edit-type"].lower() == "make-circle":
+                slicePlane, sliceIndex = self.get_slice_info_from_block_pair(
+                        mb.blocks[task["starting-block-id"]],
+                        mb.blocks[task["ending-block-id"]]
+                    )
+                
+                self.edgeDefinition.extend(
+                    mb.make_circle(
+                            task["starting-block-id"],
+                            task["ending-block-id"],
+                            task["radius"],
+                            slicePlane,
+                        )
+                )
     
         
     def get_slice_info_from_block_pair(
@@ -335,8 +363,7 @@ class Edit:
         Execute edits defined in task
 
         Args:
-            vertices (Dict): Dictionary of "Vertex" objects defining the multi-block.
-            blocks (Dict): Dictionary of "Block" objects defining the multi-block.
+            mb (MultiBlock): Instance of the MultiBlock class.
         """
         
         taskTypeCheck = [
@@ -346,13 +373,20 @@ class Edit:
             "boundary",
         ]
         
-        taskTypes = []
+        taskTypes = {
+            "vertexEdit" : [], 
+            "edgeEdit" : [],
+            "blockEdit" : [],
+            "boundary" : []
+        }
         
         hl()
         for taskType in taskTypeCheck:
             if hasattr(self.task, taskType):
                 status = True
-                taskTypes.append(getattr(self.task, taskType))
+                taskEntry = getattr(self.task, taskType)
+                if taskEntry != {}:
+                    taskTypes[taskType].append(getattr(self.task, taskType))
             else:
                 status = False
             print(f"Task type - {taskType:12} exists? - {status}")
@@ -361,19 +395,21 @@ class Edit:
             print("No edit task found!!")
             return
         
-        vertices =  mb.vertices,
-        blocks = mb.blocks,
-        slices = mb.slices
-            
+        vertices =  mb.vertices
+        blocks = mb.blocks
         
         ### Vertex operations
-        self.execute_vertex_operation(vertices)
+        if taskTypes["vertexEdit"] != []:
+            self.execute_vertex_operation(vertices)
         
         ### Edge operations
-        self.execute_edge_operation(blocks)
+        if taskTypes["edgeEdit"] != []:
+            self.execute_edge_operation(blocks)
         
         ### Block operations
-        self.execute_block_operation(mb)
+        if taskTypes["blockEdit"] != []:
+            self.execute_block_operation(mb)
         
         ## Define boundaries
-        self.define_boundaries(blocks)
+        if taskTypes["boundary"] != []:
+            self.define_boundaries(blocks)

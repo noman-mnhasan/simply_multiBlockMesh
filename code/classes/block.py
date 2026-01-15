@@ -175,7 +175,7 @@ class Block:
     
     @multiBlockIndex.setter
     def multiBlockIndex(self, value: tuple) -> None:
-        """  """
+        """ Check, raise error and assign value of Block.multiBlockIndex """
         
         if not isinstance(value, tuple):
             raise ValueError("Value of 'Block.multiBlockIndex' must be a tuple.")
@@ -305,8 +305,6 @@ class Block:
             if locationString in edgePosition:
                 edgeLocationIndex = edgePosition.index(locationString)
             
-        # print(f"Edge location index : {edgeLocationIndex}")
-        
         return edgeLocationIndex
 
 
