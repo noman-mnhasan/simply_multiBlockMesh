@@ -1,7 +1,4 @@
 
-"""  VERSION """
-__version__ = "0.1.1"
-
 
 wspace = " "
 indent = wspace * 4
