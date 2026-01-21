@@ -2,9 +2,10 @@ from collections import OrderedDict
 from typing import (
     List, 
     Dict,
+    Tuple,
 )
 
-from .block import *
+from entity.block import Block
 
 class Slice:
     """ Attributes and methods associated with a slice """
@@ -13,7 +14,7 @@ class Slice:
             self,
             plane: str,
             index: int,
-            blocks: tuple
+            blocks: Tuple[Block]
         ) -> None:
         """
         Initialize slice instance
@@ -61,17 +62,17 @@ class Slice:
     
     ### Slice -> blocks
     @property
-    def blocks(self) -> tuple:
+    def blocks(self) -> Tuple[Block]:
         return self._blocks
     
     @blocks.setter
-    def blocks(self, value: tuple) -> None:
+    def blocks(self, value: Tuple[Block]) -> None:
         """ Check, raise error and assign value of Slice.blocks """
         
         if not isinstance(value, tuple):
             raise ValueError("Value of 'Slice.blocks' must be a tuple.")
             
-            if not all([isinstance(x, int) for x in value]):
+            if not all([isinstance(x, Block) for x in value]):
                 raise ValueError("Elements of 'Slice.blocks' must be integers.")
         
         self._blocks = value

@@ -3,7 +3,7 @@
 #---------------------------------------
 ### This is the working directory
 ### This shell doesn't need to be in the working directory.
-export_directory="/path/to/the/export/directory"
+export_directory="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 #---------------------------------------
 ### Read multi-block edit file? "yes" or "no"
@@ -84,7 +84,7 @@ export hex2exclude
 
 #---------------------------------------
 ### Provide the path of the python interpreter
-python="/home/txar/work/venv_3.12.12/bin/python"
+python="/home/txar/git-repo/simply_multiBlockMesh/.venv/bin/python"
 
 #---------------------------------------
 ### Provide the path where the "simply_multiblockmesh.py" file is located

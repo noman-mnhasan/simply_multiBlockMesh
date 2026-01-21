@@ -9,20 +9,24 @@ import shutil
 
 from datetime import datetime
 from collections import OrderedDict
-import classes as mbc
-import numpy as np
 
 scriptPath = os.path.abspath(__file__)
 scriptDir = os.path.dirname(scriptPath)
 
-sys.path.append(scriptDir)
+import operation as op
 
-from lib import (
+from entity.multiblock import MultiBlock
+from operation.edit import Edit
+from operation.setup import Setup
+
+from utility.define import (
     VSEP,
+    indent,
     templateDirName,
     templateFilenameBlockEdit,
-    hl
 )
+
+from utility import tool as t
 
 
 #---------------------------------------
@@ -71,11 +75,11 @@ def make_multi_block_blockmeshdict(
         need2modify (bool): True, it edits needs to be applied in the multi-block
     """
     
-    hl()
+    t.hl()
     print("Working Directory : " + workingDir)
     
     ### Create a MultiBlockMesh object
-    mb = mbc.MultiBlock(
+    mb = MultiBlock(
             boundingBox,
             splitPlanes,
             gridSpacing,
@@ -83,10 +87,10 @@ def make_multi_block_blockmeshdict(
         )
     
     ### Create an Edit object
-    edit = mbc.Edit(workingDir)
+    edit = Edit(workingDir)
     
     ### Create a Setup object
-    setup = mbc.Setup(
+    setup = Setup(
             scriptDir,
             caseDir
         )
@@ -95,11 +99,11 @@ def make_multi_block_blockmeshdict(
     mb.make()
     
     print("\n\n")
-    hl()
+    t.hl()
     print("Multi-block indices for blocks:")
-    hl()
-    for blockName, iBlock in mb.blocks.items():
-        print(f"Block-{iBlock.id} | Indices - {iBlock.multiBlockIndex}")
+    t.hl()
+    for blockName, iblock in mb.blocks.items():
+        print(f"Block-{iblock.id} | Indices - {iblock.multiBlockIndex}")
         
     
     
@@ -110,7 +114,15 @@ def make_multi_block_blockmeshdict(
     ### Get split location information
     splitLocationInfo = VSEP + "\n"
     splitLocationInfo += "Split location information\n"
-    splitLocationInfo += mb.get_split_info()
+    
+    splitLocationInfo = VSEP + "\n"
+    splitLocationInfo += "[*] Split plane(s) along X:"
+    splitLocationInfo += indent + ", ".join([str(i) for i in mb.xVertices]) + "\n"
+    splitLocationInfo += "[*] Split plane(s) along Y:"
+    splitLocationInfo += indent + ", ".join([str(i) for i in mb.yVertices]) + "\n"
+    splitLocationInfo += "[*] Split plane(s) along Z:"
+    splitLocationInfo += indent + ", ".join([str(i) for i in mb.zVertices]) + "\n"
+    
     print(splitLocationInfo)
     
     ### Write the x/y/z coordinates of the (bounding ox & split/cut locations)
@@ -124,7 +136,7 @@ def make_multi_block_blockmeshdict(
     ### Read edit entries
     edit.does_file_exists()
     if not edit.fileExist:
-        hl()
+        t.hl()
         print("File 'block_edit_*.py' doesn't exist")
     
     if edit.fileExist:
@@ -133,7 +145,7 @@ def make_multi_block_blockmeshdict(
             ### Performing edits
             edit.execute(mb)
         else:
-            hl()
+            t.hl()
             print(f"Execute multi-block edit? - {need2modify}")
             print("No multi-block edits will be applied.")
     
@@ -142,12 +154,19 @@ def make_multi_block_blockmeshdict(
     setup.blockmeshdict(
             convertToMeters,
             mb,
-            edit.edgeDefinition,
             edit.boundaryDefinition
         )
     
+    
     ### Get face information
-    faceInfoStr = mb.face_info()
+    faceInfoStr = "FACE INFO\n" 
+    faceInfoStr += VSEP + "\n\n"
+    
+    for k,v in mb.blocks.items():
+        faceInfoStr += "Block-" + str(k) + " : " + str(v.index) + "\n\n"
+        for faceName, faces in v.faces.items():
+            faceInfoStr += indent + f"{faceName:6} : (" + " ".join(str(x) for x in faces.vertices) + ")\n"
+        faceInfoStr += "\n\n"
     
     ### Write the face information in a file
     faceInfoFile = os.path.dirname(caseDir) + os.sep + "face_information.txt"
@@ -155,7 +174,7 @@ def make_multi_block_blockmeshdict(
         fif.write(faceInfoStr)
     
     
-    ### Get slice Information  
+    ### Get slice Information
     sliceInfoStr = mb.slice_info()
         
     ### Write the slice information in a file
@@ -165,7 +184,18 @@ def make_multi_block_blockmeshdict(
     
     
     ### Get edge Information
-    edgeInfoStr = mb.edge_info()
+    edgeInfoStr = "### EDGE INFO ###\n"
+    edgeInfoStr += VSEP + "\n"
+    
+    for blockId, iblock in mb.blocks.items():
+        edgeInfoStr += f"\n\n{VSEP}\nBlock ID - {blockId}\n"
+        edgeInfoStr += VSEP + "\n"
+        edgeInfoStr += "Index | ->  - Position     - Definition\n"
+        edgeInfoStr += VSEP + "\n"
+        
+        for iedge in iblock.edges:
+            edgeInfoStr += f"{iedge.id:5} | {iedge}\n"
+    
     
     ### Write the slice information in a file
     edgeInfoFile = os.path.dirname(caseDir) + os.sep + "edge_information.txt"
@@ -191,17 +221,17 @@ def make_multi_block_blockmeshdict(
                 workingDir + os.sep + templateFilenameBlockEdit,
                 targetFile
             )
-        hl()
+        t.hl()
         print("File created for defining edit and boundary/patch.")
         print(f"File : {targetFilename}")
     
     if edit.fileExist:
-        hl()
+        t.hl()
         print(f"Input file for block edit exists.\nFile: {edit.filename}")
     
     
     ### End of process
-    hl()
+    t.hl()
     print("End of process!")
     
     return

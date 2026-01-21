@@ -4,6 +4,8 @@ from typing import (
     Dict,
 )
 
+from entity.face import Face
+from utility.define import indent
 
 class Boundary:
     """  Attributes and methods associated with a boundary/patch """
@@ -12,7 +14,7 @@ class Boundary:
             self,
             name: str,
             bcType: str,
-            faces: tuple[tuple]
+            faces: tuple[Face]
         ):
         """
         Initialize boundary instance
@@ -57,24 +59,23 @@ class Boundary:
         
     ### Boundary - faces
     @property
-    def faces(self) -> tuple[tuple]:
+    def faces(self) -> tuple[Face]:
         return self._faces
     
     @faces.setter
-    def faces(self, value: tuple[tuple]):
+    def faces(self, value: tuple[Face]):
         """ Check, raise error and assign value of Boundary.faces """
         
         if not isinstance(value, tuple) and not all([isinstance(x, tuple) for x in values]):
             raise ValueError("Value of 'boundary.faces' must be a tuple of tuples.")
+        
             if not all([[isinstance(f, Face) for f in x] for x in value]):
                 raise ValueError("Elements of 'Boundary.faces' must be instances of 'Face' class.")
+        
         self._faces = value
     
     def definition(self) -> str:
         """ Get definition of a boundary """
-        
-        wspace = " "
-        indent = 4 * wspace
         
         boundaryDef = indent *1 + f"{self._name}\n"
         boundaryDef += indent *1 + "{\n"

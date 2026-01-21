@@ -9,18 +9,19 @@ from typing import (
     Dict,
 )
 
-from lib import (
-    wspace,
+from entity.block import *
+from entity.edge import *
+from entity.face import *
+from entity.multiblock import *
+from entity.vertex import *
+
+
+from utility.define import (
     indent,
-    VSEP,
-    hl
+    taskTypeCheck
 )
 
-from .block import *
-from .edge import *
-from .face import *
-from .multiblock import *
-from .vertex import *
+from utility import tool as t
 
 
 class Edit:
@@ -42,11 +43,8 @@ class Edit:
         self._fileExist = False
         self._task = None
         self._taskExist = False
-        
         self._filePrefix = "block_edit_"
-        
         self._edgeDefinition = []
-        
         self._boundaryDefinition = []
     
     def __repr__(self):
@@ -125,7 +123,7 @@ class Edit:
         
         moduleName = self.filename.split(".")[0]
         modulePath = self._workingDir + os.sep + self.filename
-        hl()
+        t.hl()
         print(f"Module name : {moduleName}")
         
         spec = importlib.util.spec_from_file_location(
@@ -134,10 +132,11 @@ class Edit:
                                 )
         self.task = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(self.task)
+        
     
     def execute_vertex_operation(
             self,
-            vertices: Vertex
+            vertices: Dict
         ) -> None:
         """
         Execute user provided vertex edit operations
@@ -150,8 +149,17 @@ class Edit:
             
             ### Moving vertex
             if task["edit-type"].lower() == "move":
+                
+                if "new-location" in task:
+                    location = task["new-location"]
+                    delta = None
+                elif "delta" in task:
+                    location = None
+                    delta = task["delta"]
+                    
                 vertices[task["id"]].move(
-                        task["new-location"]
+                        location,
+                        delta 
                     )
             
             ### Collapsing vertices
@@ -162,12 +170,53 @@ class Edit:
             
             ### Move_Collapse vertices
             if task["edit-type"].lower() == "move-collapse":
+                
+                if "new-location" in task:
+                    location = task["new-location"]
+                    delta = None
+                elif "delta" in task:
+                    location = None
+                    delta = task["delta"]
+                
                 vertices[task["id"]].move_collapse(
-                        task["new-location"],
-                        vertices[task["target-vertex"]]
+                        vertices[task["target-vertex"]],
+                        location,
+                        delta
+                    )
+            
+            ### Scaling vertex
+            if task["edit-type"].lower() == "scale":
+                    
+                vertices[task["id"]].scale(
+                        task["ratio"],
+                        task["reference"]
                     )
         
-    
+    def process_edge_edit_input(
+            self,
+            blocks: Dict,
+            task: Dict,
+        ) -> Dict:
+        """
+        Identifies required edges and prepares dictionary containing action/operation details.
+
+        Args:
+            blocks (Dict): Dictionary of instances of the 'Block' class.
+            task (Dict): Dictionary containing edit operation input from user
+
+        Returns:
+            Dict: Returns dictionary containing edge action/operation details
+        """
+        
+        editInfo = {}
+        
+        for key, value in task.items():
+            if "edge" in key:
+                editInfo[key] = blocks[task[key]["block-id"]].find_edge(task[key]["position"])
+            else:
+                editInfo[key] = value
+        
+        return editInfo
     
     def execute_edge_operation(
             self,
@@ -186,144 +235,168 @@ class Edit:
         for taskId, task in self.task.edgeEdit.items():
             
             ### Identify edge
-            edge = blocks[task["block-id"]].find_edge(
-                    task["edge-position"]
+            editInfo = self.process_edge_edit_input(
+                    blocks,
+                    task
                 )
-            if "target-edge" in task.keys():
-                targetEdge = blocks[task["target-edge"]["block-id"]].find_edge(
-                        task["target-edge"]["edge-position"]
-                    )
             
             ### Moving edge
             if task["edit-type"].lower() == "move":
-                edge.move(task["delta"])
+                editInfo["edge"].move(task["delta"])
             
             ### Collapsing edge
             if task["edit-type"].lower() == "collapse":
-                edge.collapse(targetEdge)
+                editInfo["edge"].collapse(editInfo["target-edge"])
             
             ### Moving-collapsing edge
             if task["edit-type"].lower() == "move-collapse":
-                edge.move_collapse(
+                editInfo["edge"].move_collapse(
                         task["delta"],
-                        targetEdge
+                        editInfo["target-edge"]
                     )
+            
+            ### Scaling edge
+            if task["edit-type"].lower() == "scale":
+                editInfo["edge"].scale(task["ratio"])
+            
+            
             
             ### Create arc definition
             if task["edit-type"].lower() == "make-arc":
-                self.edgeDefinition.append(
-                        edge.arc(task["arc-point"])
-                    )
+                editInfo["edge"].arc(editInfo)
             
             ### Create spline definition
             if task["edit-type"].lower() == "make-spline":
-                self.edgeDefinition.append(
-                        edge.spline(task["spline-points"])
-                    )
+                editInfo["edge"].spline(editInfo)
+    
+        
+    def process_face_edit_input(
+            self,
+            blocks: Dict,
+            task: Dict,
+        ) -> Dict:
+        """
+        Identifies required edges and prepares dictionary containing action/operation details.
+
+        Args:
+            blocks (Dict): Dictionary of instances of the 'Block' class.
+            task (Dict): Dictionary containing edit operation input from user
+
+        Returns:
+            Dict: Returns dictionary containing face action/operation details
+        """
+        
+        editInfo = {}
+        
+        for key, value in task.items():
+            if "face" in key:
+                editInfo[key] = blocks[task[key]["block-id"]].faces[task[key]["side"]]
+            else:
+                editInfo[key] = value
+        
+        return editInfo
+    
+    def execute_face_operation(
+            self,
+            blocks: Dict
+        ) -> None:
+        """
+        Execute user provided edge edit operations
+
+        Args:
+            blocks (dict): Dictionary of the "Blocks" objects defining the multi-block
+
+        Raises:
+            ValueError: For improper edge definitions
+        """
+        
+        for taskId, task in self.task.faceEdit.items():
             
-            ### Create polyline definition
-            if task["edit-type"].lower() == "make-polyline":
-                self.edgeDefinition.append(
-                        edge.spline(task["polyline-points"])
-                    )
+            ### Identify edge
+            editInfo = self.process_face_edit_input(
+                    blocks,
+                    task
+                )
+            
+            ### Moving face
+            if task["edit-type"].lower() == "move":
+                editInfo["face"].move(task["delta"])
+            
+            ### Scaling face
+            if task["edit-type"].lower() == "scale":
+                editInfo["face"].scale(task["ratio"])
     
     def execute_block_operation(
             self,
             mb: MultiBlock
         ) -> None:
-        
-        
+        """
+        Execute user provided block edit operations
+
+        Args:
+            mb (MultiBlock): Instance of the "Blocks" class defining the multi-block
+        """
         for taskId, task in self.task.blockEdit.items():
+            
+            ### Moving block
+            if task["edit-type"].lower() == "move":
+                mb.blocks[task["block-id"]].move(
+                        delta = task["delta"]
+                    )
+            
+            ### scaling-2d block
+            if task["edit-type"].lower() == "scale-2d":
+                if isinstance(task["block-id"], list):
+                    blocks2scale = [mb.blocks[i] for i in task["block-id"]]
+                    mb.scaleSliceBlocks(
+                            blocks2scale,
+                            task["plane"],
+                            task["ratio"],
+                        )
+                    
+                elif isinstance(task["block-id"], int):
+                    mb.blocks[task["block-id"]].scale2d(
+                            task["plane"],
+                            task["ratio"],
+                        )
+            
+            ### scaling-3d block     
+            if task["edit-type"].lower() == "scale-3d":
+                if isinstance(task["block-id"], list):
+                    blocks2scale = [mb.blocks[i] for i in task["block-id"]]
+                    mb.scaleSliceBlocks(
+                            blocks2scale,
+                            task["ratio"],
+                        )
+                    
+                elif isinstance(task["block-id"], int):
+                    mb.blocks[task["block-id"]].scale3d(
+                            task["ratio"],
+                        )
             
             ### Making quadrant
             if task["edit-type"].lower() == "make-quadrant":
-                slicePlane, sliceIndex = self.get_slice_info_from_block_pair(
-                        mb.blocks[task["starting-block-id"]],
-                        mb.blocks[task["ending-block-id"]]
-                    )
-                
-                self.edgeDefinition.extend(
-                    mb.make_quadrant(
-                            task["starting-block-id"],
-                            task["ending-block-id"],
-                            task["radius"],
-                            slicePlane,
-                        )
+                mb.make_quadrant(
+                        task["starting-block-id"],
+                        task["ending-block-id"],
+                        task["radius"],
                     )
             
             ### Making semicircle
             if task["edit-type"].lower() == "make-semicircle":
-                slicePlane, sliceIndex = self.get_slice_info_from_block_pair(
-                        mb.blocks[task["starting-block-id"]],
-                        mb.blocks[task["ending-block-id"]]
-                    )
-                
-                self.edgeDefinition.extend(
-                    mb.make_semicircle(
-                            task["starting-block-id"],
-                            task["ending-block-id"],
-                            task["radius"],
-                            slicePlane,
-                        )
+                mb.make_semicircle(
+                        task["starting-block-id"],
+                        task["ending-block-id"],
+                        task["radius"],
                     )
             
             ### Making circle
             if task["edit-type"].lower() == "make-circle":
-                slicePlane, sliceIndex = self.get_slice_info_from_block_pair(
-                        mb.blocks[task["starting-block-id"]],
-                        mb.blocks[task["ending-block-id"]]
+                mb.make_circle(
+                        task["starting-block-id"],
+                        task["ending-block-id"],
+                        task["radius"],
                     )
-                
-                self.edgeDefinition.extend(
-                    mb.make_circle(
-                            task["starting-block-id"],
-                            task["ending-block-id"],
-                            task["radius"],
-                            slicePlane,
-                        )
-                )
-    
-        
-    def get_slice_info_from_block_pair(
-            self,
-            block1: Block,
-            block2: Block
-        ) -> tuple:
-        """
-        Compares multi-block index between two blocks.
-        Get matching "slice plane" and matching "slice index"
-
-        Args:
-            blockPair (Block): One of the two blocks to be compared
-            blockPair (Block): The other block to be compared
-
-        Returns:
-            tuple: (matching slice plane, index of the matching slice plane)
-        """
-        
-        planeMatchIndexMap = {
-            0 : "yz",
-            1 : "zx",
-            2 : "xy"
-        }
-        
-        gridIndexBlock1 = block1.multiBlockIndex
-        gridIndexBlock2 = block2.multiBlockIndex
-        
-        gridIndexCompare = [
-            gridIndexBlock1[0] == gridIndexBlock2[0],
-            gridIndexBlock1[1] == gridIndexBlock2[1],
-            gridIndexBlock1[2] == gridIndexBlock2[2],
-        ]
-        
-        matchedIndex = gridIndexCompare.index(True)
-        slicePlane = planeMatchIndexMap[matchedIndex]
-        sliceIndex = gridIndexBlock1[matchedIndex]
-        
-        return (
-            slicePlane,
-            sliceIndex
-        )
     
     def define_boundaries(
             self,
@@ -366,21 +439,15 @@ class Edit:
             mb (MultiBlock): Instance of the MultiBlock class.
         """
         
-        taskTypeCheck = [
-            "vertexEdit", 
-            "edgeEdit",
-            "blockEdit",
-            "boundary",
-        ]
-        
         taskTypes = {
             "vertexEdit" : [], 
             "edgeEdit" : [],
+            "faceEdit" : [],
             "blockEdit" : [],
             "boundary" : []
         }
         
-        hl()
+        t.hl()
         for taskType in taskTypeCheck:
             if hasattr(self.task, taskType):
                 status = True
@@ -405,6 +472,10 @@ class Edit:
         ### Edge operations
         if taskTypes["edgeEdit"] != []:
             self.execute_edge_operation(blocks)
+        
+        ### Face operations
+        if taskTypes["faceEdit"] != []:
+            self.execute_face_operation(blocks)
         
         ### Block operations
         if taskTypes["blockEdit"] != []:

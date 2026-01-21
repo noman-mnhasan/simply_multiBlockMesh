@@ -1,7 +1,12 @@
 
-
+#---------------------------------------
+### Parameter Initialization ###
+#---------------------------------------
 vertexEdit = {}
 edgeEdit = {}
+faceEdit = {}
+blockEdit = {}
+multiBLock = {}
 boundary = {}
 
 
@@ -21,8 +26,13 @@ Available Edit Types
 VERTEX
     - move
     - collapse
+    - move-collapse
 
 EDGE
+    - move
+    - collapse
+    - move-collapse
+    - scale
     - make edge an arc
     - make edge a spline
 ---------------------------------------

@@ -2,18 +2,19 @@
 import os
 import shutil
 
-import classes as mbc
-
 from typing import (
-    List, 
-    Dict,
+    List
 )
 
-from lib import (
-    VSEP,
+
+from entity.multiblock import MultiBlock
+
+from utility.define import (
+    indent,
     ofCaseTemplateDirname,
-    hl
 )
+
+from utility import tool as t
 
 
 
@@ -106,7 +107,7 @@ class Setup:
                 elif os.path.isdir(itemPath):
                     shutil.rmtree(itemPath)
         
-        hl()
+        t.hl()
         print("OpenFoam case directory for blockMesh cleared!")
     
     def make_case_dir(self) -> None:
@@ -118,7 +119,7 @@ class Setup:
                 os.makedirs(item, exist_ok = True)
                 
             except OSError as error:
-                hl()
+                t.hl()
                 print(f"Error creating the \"{directory}\" directory.")
                 print("Aborting ... ...")
                 exit(-2)
@@ -152,8 +153,7 @@ class Setup:
     def blockmeshdict(
             self,
             convertToMeters: float,
-            mb: mbc.MultiBlock,
-            edgeDefinition: List,
+            mb: MultiBlock,
             boundaryDefinition: List
         ) -> None:
         """
@@ -166,12 +166,8 @@ class Setup:
             boundaryDefinition (List): Definition of boundary to add to blockMeshDict
         """
         
-        wspace = " "
-        indent = wspace * 4    
         dictContent = blockMeshDictHeader
-        
         dictContent +="\nconvertToMeters=" + str(convertToMeters) + ";\n"
-        
         dictContent += "vertices\n"
         dictContent += "(\n"
         
@@ -216,8 +212,9 @@ class Setup:
         dictContent += "edges\n"
         dictContent += "(\n"
         
-        for entry in edgeDefinition:
-            dictContent += entry + "\n\n"
+        for iedge in mb.edges:
+            if iedge.type in ["arc", "spline", "polyline"]:
+                dictContent += indent + iedge.definition + "\n\n"
         
         dictContent += ");\n"
         dictContent += "\n"
@@ -234,11 +231,12 @@ class Setup:
         dictContent += ");\n"
         dictContent += "// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n"
         dictContent += "// Comments/Notes\n"
+        dictContent += "// Prepared by \"Simply multiBlockMesh\" (SimBloM)\n"
+        dictContent += "// - https://github.com/noman-mnhasan/simply_multiBlockMesh\n"
         dictContent += "//\n"
         dictContent += "//\n"
         dictContent += "// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n"
         dictContent += "\n"    
-        
         
         ### Write blockMeshDict
         exportFile = self._caseDir + os.sep + "system" + os.sep + "blockMeshDict"

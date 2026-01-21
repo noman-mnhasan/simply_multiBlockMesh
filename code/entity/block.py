@@ -1,19 +1,22 @@
+
+import math
 from collections import OrderedDict
 from typing import (
     List, 
     Dict,
+    Tuple,
 )
 
-from lib import (
-    wspace,
-    indent,
-    VSEP,
-    hl
+from utility.define import wspace
+from utility import tool as t
+from utility.udtypes import (
+    PointValueType
 )
+from operation.action.ablock import BlockAction
 
-from .face import *
-from .edge import *
-from .vertex import *
+from entity.face import Face
+from entity.edge import Edge
+from entity.vertex import Vertex
 
 
 class Block:
@@ -57,6 +60,7 @@ class Block:
         self._dx = self._spacing["x"]
         self._dy = self._spacing["y"]
         self._dz = self._spacing["z"]
+        self._action = BlockAction(self)
     
     def __repr__(self):
         return f"\nBlock : {self.id}\nIndex : {self.index}\n"
@@ -96,7 +100,7 @@ class Block:
     
     @isActive.setter
     def isActive(self, value: bool):
-        """ Check, raise error and assign value of Block.index """
+        """ Check, raise error and assign value of Block.isActive """
         
         if not isinstance(value, bool):
             raise ValueError("Value of 'Block.isActive' must be a bool.")
@@ -109,14 +113,14 @@ class Block:
         return self._vertices
     
     @vertices.setter
-    def vertices(self, value: tuple):
+    def vertices(self, value: Tuple[Vertex]):
         """ Check, raise error and assign value of Block.vertices """
         
         if not isinstance(value, tuple):
-            raise ValueError("Value of 'Block.vertices' must be a tuple of integers.")
+            raise ValueError("Value of 'Block.vertices' must be a tuple.")
             
-            if not all([isinstance(x, int) for x in value]):
-                raise ValueError("Elements of 'Block.vertices' must be integers.")
+            if not all([isinstance(x, Vertex) for x in value]):
+                raise ValueError("Elements of 'Block.vertices' must be instances of 'Vertex' class.")
         
         self._vertices = value
     
@@ -131,7 +135,7 @@ class Block:
         
         if not isinstance(value, Dict):
             raise ValueError("Value of 'Block.vertexCoordinates' must be a dictionary.")
-            if not all([isinstance(x, Vertex) for x in value.values()]):
+            if not all([isinstance(x, tuple) for x in value.values()]):
                 raise ValueError("Elements of 'Block.vertexCoordinates' must be floats.")
         
         self._vertexCoordinates = value
@@ -158,7 +162,7 @@ class Block:
         return self._edges
     
     @edges.setter
-    def edges(self, value: tuple):
+    def edges(self, value: Tuple[Edge]):
         """ Check, raise error and assign value of Block.edges """
         
         if not isinstance(value, tuple):
@@ -214,7 +218,7 @@ class Block:
         
         if not isinstance(value, dict):
             raise ValueError("Value of 'Block.grading' must be a dictionary.")
-            if not all([isinstance(x, (int, float)) for x in value]):
+            if not all([isinstance(x, PointValueType) for x in value]):
                 raise ValueError("Elements of 'Block.grading' must be integers or floats")
         
         self._grading = value
@@ -332,7 +336,7 @@ class Block:
         
         return edge
     
-    def _get_hex(self) -> str:
+    def get_hex(self) -> str:
         """ Define the block hex. """
         
         hexDef = "hex ("
@@ -351,7 +355,7 @@ class Block:
         return hexDef
     
     
-    def _get_spacing(self) -> str:
+    def get_spacing(self) -> str:
         """ Define the block grid spacing """
         
         spacingDef = "("
@@ -362,7 +366,7 @@ class Block:
         return spacingDef
     
     
-    def _get_grading(self):
+    def get_grading(self):
         """ Define the block edge grading. """
         
         gradingDef = "("
@@ -377,12 +381,12 @@ class Block:
     def definition(self):
         """ Get block definition to write in the dictionary """
         
-        blockDef = self._get_hex() + " " + self._get_spacing() + " " + self._get_grading()
+        blockDef = self.get_hex() + " " + self.get_spacing() + " " + self.get_grading()
         
         return blockDef
     
     
-    def get_minmax(self) -> Dict:
+    def minmax(self) -> Dict:
         """  
             Calculates min/max along x, y, z direction for a given block
             Returns a dictionary containing the min/max data
@@ -422,17 +426,56 @@ class Block:
             Returns a tuple of the spacing along the x, y, z direction
         """
         
-        blockMinMax = self.get_minmax()
-        
-        nx = int((blockMinMax["x-max"] - blockMinMax["x-min"])/float(self._dx))
-        ny = int((blockMinMax["y-max"] - blockMinMax["y-min"])/float(self._dy))
-        nz = int((blockMinMax["z-max"] - blockMinMax["z-min"])/float(self._dz))
-        
-        if nx == 0:
-            nx = 1
-        if ny == 0:
-            ny = 1
-        if nz == 0:
-            nz = 1
+        blockMinMax = self.minmax()
+        nx, ny, nz = t.grid_spacing(
+                blockMinMax,
+                self._dx,
+                self._dy,
+                self._dz
+            )
         
         return nx, ny, nz
+    
+    def move(
+            self,
+            delta : tuple[float]
+        ) -> None:
+        """
+        Move selected block
+
+        Args:
+            delta (tuple): a tuple of delta values along x, y, z direction
+        """
+        
+        for ivertex in self.vertices:
+            ivertex.move(delta = delta)
+    
+    def scale2d (
+            self,
+            scalingPlane: str,
+            ratio: PointValueType,
+        ) -> None:
+        """
+        Scale block along a specified plane
+
+        Args:
+            scalingPlane (str): Name of the plane along which the block will be scaled
+            ratio (PointValueType): Ratio of the scaling operation
+        """
+        
+        self._action.scale2d(scalingPlane, ratio)
+    
+    def scale3d (
+            self,
+            ratio: PointValueType,
+        ) -> None:
+        """
+        Scale block
+
+        Args:
+            ratio (PointValueType): Ratio of the scaling operation
+        """
+        
+        self._action.scale3d(ratio)
+        
+        

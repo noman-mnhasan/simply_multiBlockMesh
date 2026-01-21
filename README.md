@@ -13,8 +13,9 @@
 
 1. [About](#about)
 2. [Why "Simply MultiBlockMesh"](#why-simply-multiblockmesh)
-2. [How To Use](#how-to-use)
-3. [Example Workflow](#example-workflow)
+3. [User Manual](#user-manual)
+4. [How To Use](#how-to-use)
+5. [Example Workflow](#example-workflow)
 
     1. [Input Setup](#input-setup)
     2. [First Run](#first-run)
@@ -24,7 +25,7 @@
         2. [Modifying Blocks](#modifying-blocks)
         3. [Defining Boundary Conditions](#defining-boundary-conditions)
 
-4. [Test Case](#test-case)
+6. [Test Case](#test-case)
 
 
 <br>
@@ -353,34 +354,41 @@ Sample arc definition in the `block_edit_*.py` file -
 ```python
 
 edgeEdit[1] = {
-    ### Block ID
-    "block-id" : 0,
-    
     ### Type of edge edit
     "edit-type" : "make-arc",
+
+    ### Method for defining the arc-point
+    "method" : "arc-point",
     
-    ### Edge's position in the block (position order insensitive)
-    "edge-position" : ["front", "left"],
+    ### Edge detail
+    "edge":{
+        "block-id" : 2,
+        "position" : ["back", "top"],
+        },
     
-    ### Defining points
-    "arc-point" : [0.38, 0.1, 0.2]
+    ### Defining point
+    "arc-point" : [1.25, 0.25, 0.0],
 }
 
 edgeEdit[2] = {
-    ### Block ID
-    "block-id" : 7,
-    
     ### Type of edge edit
     "edit-type" : "make-spline",
+
+    ### Method for defining the arc-point
+    "method" : "spline-point",
     
-    ### Edge's position in the block (position order insensitive)
-    "edge-position" : ["front", "right"],
+    ### Edge detail
+    "edge":{
+        "block-id" : 3,
+        "position" : ["back", "top"],
+        },
     
     ### Defining points
-    "spline-points" : [
-    		[0.58, 0.2, 0.2],
-    		[0.62, 0.3, 0.2]
-    	]
+    "spline-point" : [
+            [0.6, 1.2, 0.0],
+            [0.7, 1.5, 0.0],
+            [0.8, 1.2, 0.0],
+        ],
 }
 
 ```
@@ -388,12 +396,13 @@ edgeEdit[2] = {
 ```C
 edges
 (
-    arc 25 29 (0.38 0.1 0.2)
+    arc 6 7 (1.25, 0.25, 0.0)
 
-    spline 26 30 
+    spline 7 8
     (
-        (0.58 0.2 0.2)
-        (0.62 0.3 0.2)
+        (0.6, 1.2, 0.0)
+        (0.7, 1.5, 0.0)
+        (0.8, 1.2, 0.0)
     )
 
 
