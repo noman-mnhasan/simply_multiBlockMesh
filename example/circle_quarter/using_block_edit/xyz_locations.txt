@@ -1,0 +1,4 @@
+----------------------------------------
+[*] Split plane(s) along X:    0.0, 0.5, 1.0
+[*] Split plane(s) along Y:    0.0, 0.5, 1.0
+[*] Split plane(s) along Z:    0.0, 0.2

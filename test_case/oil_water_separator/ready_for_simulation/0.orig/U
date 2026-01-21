@@ -1,0 +1,101 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volVectorField;
+    object      U;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// #### MACRO - START ####
+
+inletArea       0.00029999954084310014; // m^2
+inletVelocity   0.5; // m/s
+
+// #### MACRO- END ####
+
+dimensions      [0 1 -1 0 0 0 0];
+
+internalField   uniform (0 0 0);
+
+boundaryField
+{
+    inlet
+    {
+        type                  flowRateInletVelocity;
+        volumetricFlowRate    constant #eval{ $inletArea * $inletVelocity };
+        extrpolateProfile     false;
+        value                 uniform (0 0 0);
+    }
+    
+    wall
+    {
+        type            fixedValue;
+        value           uniform (0 0 0);
+    }
+    
+    // outlet_water
+    // {
+    //     type                  flowRateOutletVelocity;
+    //     volumetricFlowRate    constant #eval{ 0.4 * $inletArea * $inletVelocity };
+    //     extrpolateProfile     false;
+    //     value                 uniform (0 0 0);
+    // }
+
+    // outlet_oil
+    // {
+    //     type                  flowRateOutletVelocity;
+    //     volumetricFlowRate    constant #eval{ 0.4 * $inletArea * $inletVelocity };
+    //     extrpolateProfile     false;
+    //     value                 uniform (0 0 0);
+    // }
+    
+    outlet_water
+    {
+        type                  flowRateOutletVelocity;
+        value                 uniform (0 0 0);
+        
+        volumetricFlowRate    table
+        (
+            // Syntax --> (time, value)
+            (0.00    0.00)
+            (0.10    #eval{ 0.1 * $inletArea * $inletVelocity })
+            (0.15    #eval{ 0.2 * $inletArea * $inletVelocity })
+            (0.20    #eval{ 0.3 * $inletArea * $inletVelocity })
+            (0.25    #eval{ 0.4 * $inletArea * $inletVelocity })
+            (0.30    #eval{ 0.5 * $inletArea * $inletVelocity })
+        );
+    }
+
+    outlet_oil
+    {
+        type                  flowRateOutletVelocity;
+        value                 uniform (0 0 0);
+        
+        volumetricFlowRate    table
+        (
+            // Syntax --> (time, value)
+            (0.00    0.00)
+            (0.10    #eval{ 0.1 * $inletArea * $inletVelocity })
+            (0.15    #eval{ 0.2 * $inletArea * $inletVelocity })
+            (0.20    #eval{ 0.3 * $inletArea * $inletVelocity })
+            (0.25    #eval{ 0.4 * $inletArea * $inletVelocity })
+            (0.30    #eval{ 0.5 * $inletArea * $inletVelocity })
+        );
+    }
+
+    outlet_air
+    {
+        type            zeroGradient;
+    }
+}
+
+
+// ************************************************************************* //

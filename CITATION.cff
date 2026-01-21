@@ -1,0 +1,37 @@
+cff-version: 1.2.0
+title: Simply multiBlockMesh (SimBloM)
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+authors:
+  - given-names: Noman
+    family-names: Hasan
+    email: noman.mnhasan@gmail.com
+    orcid: 'https://orcid.org/0000-0003-1413-6139'
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.18209669
+  - type: url
+    value: 'https://github.com/noman-mnhasan/simply_multiBlockMesh'
+repository-code: 'https://github.com/noman-mnhasan/simply_multiBlockMesh'
+abstract: >-
+  Python tool for multi-block blockMeshDict (OpenFOAM)
+  generator to create block structured mesh.
+keywords:
+  - CFD
+  - OpenFOAM
+  - meshing
+  - structured-mesh
+  - block-structured
+  - hex-mesh
+  - hexahedral
+  - mesh-manipulation
+  - blockMesh
+  - blockMeshDict
+  - multi-block
+  - Python
+  - geometry
+license: GPL-3.0
+commit: 8e7670c8cadbe351a0f7c2109cf6b5c282009617
+version: v0.1.0
+date-released: '2026-01-10'
