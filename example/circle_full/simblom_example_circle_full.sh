@@ -73,12 +73,12 @@ export hex2exclude
 
 #---------------------------------------
 ### Provide the path of the python interpreter
-python="/home/txar/work/venv_3.12.12/bin/python"
+python="/path/to/python/interpreter"
 
 #---------------------------------------
 ### Provide the path where the "simply_multiblockmesh.py" file is located
 ### Make sure the "classes" file and the "case_system_template" directory (with its contents) are also in the same directory.
-simply_multiblockmesh="/home/txar/git-repo/simply_multiBlockMesh/code/simply_multiblockmesh.py"
+simply_multiblockmesh="/path/to/'simply_multiblockmesh.py'/script/in/local/drive"
 
 #---------------------------------------
 

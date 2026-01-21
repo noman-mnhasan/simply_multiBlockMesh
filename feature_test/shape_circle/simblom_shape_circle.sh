@@ -20,11 +20,11 @@ convert_to_meters=1
 
 bounding_box='{
     "x-min" : 0.0,
-    "x-max" : 1.0,
+    "x-max" : 2.0,
     "y-min" : 0.0,
-    "y-max" : 1.0,
+    "y-max" : 2.0,
     "z-min" : 0.0,
-    "z-max" : 0.4
+    "z-max" : 0.2
 }'
 
 #---------------------------------------
@@ -42,8 +42,8 @@ bounding_box='{
 # }'
 
 split_plane_list='{
-    "x" : [0.5],
-    "y" : [0.5],
+    "x" : [0.50, 1.0, 1.5],
+    "y" : [0.50, 1.0, 1.5],
     "z" : []
 }'
 
@@ -58,7 +58,7 @@ gid_spacing='{
 #---------------------------------------
 
 hex2exclude='{
-    "exclude-list" : [3]
+    "exclude-list" : []
 }'
 
 #---------------------------------------
@@ -70,7 +70,6 @@ export convert_to_meters
 export split_plane_list
 export gid_spacing
 export hex2exclude
-
 #---------------------------------------
 ### Provide the path of the python interpreter
 python="/path/to/python/interpreter"

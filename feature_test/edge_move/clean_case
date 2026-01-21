@@ -1,0 +1,4 @@
+#! /usr/bin/bash
+
+rm -f *.txt
+rm -rf case __pycache__ 
